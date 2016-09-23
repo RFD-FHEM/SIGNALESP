@@ -1,4 +1,4 @@
-# SIGNALDuino uC v3.2 (development version)
+# SIGNALESP uC v3.3 (development version)
 
 System to receive digital signals and provide them to other systems pro demodulatiob. Currently tested with 433 MHZ, but not limited to that frequency or media.
 
