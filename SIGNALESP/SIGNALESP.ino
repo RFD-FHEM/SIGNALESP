@@ -10,15 +10,21 @@
 #define BAUDRATE               115200
 #define FIFO_LENGTH			   100
 #define DEBUG				   1
-const char* ssid				= "**********";
-const char* password			= "**********";
+
+#include "configwifi.h"
+
+#if WIFI_Enable 1	
+		#define ETHERNET_PRINT
+		#include <ESP8266WiFi.h>
+
+		WiFiServer server(23);
+		WiFiClient serverClients[1];
+
+#endif
+
 #define MAX_SRV_CLIENTS			1
 
 
-//#include <ESP8266WiFi.h>
-
-//WiFiServer server(23);
-//WiFiClient serverClients[1];
 
 #include <output.h>
 #include <bitstore.h>  // Die wird aus irgend einem Grund zum Compilieren benoetigt.
@@ -82,6 +88,7 @@ void getFunctions(bool *ms, bool *mu, bool *mc);
 
 
 void setup() {
+	ESP.wdtEnable(1500);
 	Serial.begin(BAUDRATE);
 #ifdef DEBUG
 	Serial.println("Using sFIFO");
