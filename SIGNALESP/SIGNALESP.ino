@@ -7,7 +7,7 @@
 #define PIN_RECEIVE            2
 #define PIN_LED                16
 #define PIN_SEND               0
-#define BAUDRATE               250000
+#define BAUDRATE               115200
 #define FIFO_LENGTH			   100
 #define DEBUG				   1
 const char* ssid				= "**********";
@@ -532,6 +532,7 @@ void serialEvent()
 		default:
 			cmdstring += inChar;
 		}
+		yield();
 	}
 }
 
@@ -561,7 +562,7 @@ unsigned long getUptime()
 void getPing()
 {
 	MSG_PRINTLN("OK");
-	delay(1);
+	yield();
 }
 
 void changeReciver() {
