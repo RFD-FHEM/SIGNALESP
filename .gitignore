@@ -6,6 +6,7 @@
 *.user
 *.userosscache
 *.sln.docstates
+configwifi.h
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
