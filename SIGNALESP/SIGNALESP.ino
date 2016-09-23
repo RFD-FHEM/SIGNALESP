@@ -13,13 +13,12 @@
 
 #include "configwifi.h"
 
-#if WIFI_Enable 1	
+#if WIFI_Enable == 1	
 		#define ETHERNET_PRINT
 		#include <ESP8266WiFi.h>
 
-		WiFiServer server(23);
-		WiFiClient serverClients[1];
-
+		WiFiServer Server(23);
+		//WiFiClient serverClients[1];
 #endif
 
 #define MAX_SRV_CLIENTS			1
@@ -71,7 +70,7 @@ os_timer_t cronTimer;
 void enableReceive();
 void disableReceive();
 void serialEvent();
-void cronjob();
+void cronjob(void *pArg);
 int freeRam();
 void changeReciver();
 void HandleCommand();
@@ -88,8 +87,23 @@ void getFunctions(bool *ms, bool *mu, bool *mc);
 
 
 void setup() {
-	ESP.wdtEnable(1500);
+	//ESP.wdtEnable(2000);
 	Serial.begin(BAUDRATE);
+
+#if WIFI_Enable == 1	
+	DBG_PRINTLN("Connecting to WLAN ");
+	WiFi.begin(ssid, password);
+	while (WiFi.status() != WL_CONNECTED)
+	{
+		delay(500);
+		Serial.print(".");
+	}
+	DBG_PRINTLN(" connected");
+
+	Server.begin();
+	DBG_PRINTLN("Server started at IP: "); DBG_PRINTLN( WiFi.localIP().toString().c_str());
+#endif
+
 #ifdef DEBUG
 	Serial.println("Using sFIFO");
 #endif
