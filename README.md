@@ -2,12 +2,21 @@
 
 System to receive digital signals and provide them to other systems pro demodulatiob. Currently tested with 433 MHZ, but not limited to that frequency or media.
 
+### Imporant note
+
+SIGNALESP is currently not really working for production
+D4 on NodeMCU is GPIO2. 
+Serial Port operates with 2500000 Baud
+Free Ram can't be received via command
+IT Send commands are not available
+
 ### Getting started
 
 
-Just clone the repo and open the project file with code:blocks. (currently this works only for windows)
+Just clone the repo and open the project file with Visual Studio / Visual Micro. (currently this works only for windows)
 Compile it and have fun.
 If you are using the Arduino IDE, you have to copy all the libs into your sketch folder.
+
 
 ### Using SIGNALDuino in FHEM
 
