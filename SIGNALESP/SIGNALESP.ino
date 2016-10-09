@@ -11,18 +11,6 @@
 #define FIFO_LENGTH			   100
 #define DEBUG				   1
 
-#include "configwifi.h"
-
-#if WIFI_Enable == 1	
-		#define ETHERNET_PRINT
-		#include <ESP8266WiFi.h>
-
-		WiFiServer Server(23);
-		//WiFiClient serverClients[1];
-#endif
-
-#define MAX_SRV_CLIENTS			1
-
 
 
 #include <output.h>
@@ -83,26 +71,39 @@ void configCMD();
 void storeFunctions(const int8_t ms = 1, int8_t mu = 1, int8_t mc = 1);
 void getFunctions(bool *ms, bool *mu, bool *mc);
 
-
+#include <ESP8266WiFi.h>
+#include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
+#include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
+#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
 
 
 void setup() {
 	//ESP.wdtEnable(2000);
-	Serial.begin(BAUDRATE);
+    Serial.begin(115200);
+  Serial.println();
+  WiFiManager wifiManager;
+  wifiManager.setBreakAfterConfig(true);
+  //reset settings - for testing
+  //wifiManager.resetSettings();
 
-#if WIFI_Enable == 1	
-	DBG_PRINTLN("Connecting to WLAN ");
-	WiFi.begin(ssid, password);
-	while (WiFi.status() != WL_CONNECTED)
-	{
-		delay(500);
-		Serial.print(".");
-	}
-	DBG_PRINTLN(" connected");
+  //tries to connect to last known settings
+  //if it does not connect it starts an access point with the specified name
+  //here  "NodeDuino" with no password
+  //and goes into a blocking loop awaiting configuration
+  if (!wifiManager.autoConnect("NodeDuino")) {
+    Serial.println("failed to connect, we should reset as see if it connects");
+    delay(3000);
+    ESP.reset();
+    delay(5000);
+  }
 
-	Server.begin();
-	DBG_PRINTLN("Server started at IP: "); DBG_PRINTLN( WiFi.localIP().toString().c_str());
-#endif
+  //if you get here you have connected to the WiFi
+  Serial.println("connected...)");
+
+
+  Serial.println("local ip");
+  Serial.println(WiFi.localIP());
+
 
 #ifdef DEBUG
 	Serial.println("Using sFIFO");
@@ -129,7 +130,6 @@ void setup() {
 	Serial.println("Init eeprom to defaults after flash");
 	#endif
 	}*/
-	//WiFi.begin(ssid, password);
 
 	enableReceive();
 	cmdstring.reserve(20);
@@ -560,7 +560,7 @@ void serialEvent()
 
 int freeRam() {
 
-	// Todo: Get code for esp to receive free RAM
+	system_get_free_heap_size()
 	return 0;
 
 }
