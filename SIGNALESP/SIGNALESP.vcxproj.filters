@@ -33,7 +33,7 @@
     <ClInclude Include="..\..\SIGNALDuino\src\_micro-api\libraries\output\src\output.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\config-wifi.h">
+    <ClInclude Include="configwifi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
