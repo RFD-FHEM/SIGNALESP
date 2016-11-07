@@ -288,13 +288,14 @@ void send_raw(const uint8_t startpos, const uint16_t endpos, const int16_t *buck
 		dur = abs(buckets[index]); 		//isLow ? dur = abs(buckets[index]) : dur = abs(buckets[index]);
 
 		while (stoptime > micros()) {
-			;
+			yield();
+			
 		}
 		isLow ? digitalLow(PIN_SEND) : digitalHigh(PIN_SEND);
 		stoptime += dur;
 	}
 	while (stoptime > micros()) {
-		;
+		yield();
 	}
 	//MSG_PRINTLN("");
 
