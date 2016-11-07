@@ -36,6 +36,9 @@
     <ClInclude Include="configwifi.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\_micro-api\libraries\WIFIManager\WiFiManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\_micro-api\libraries\SimpleFIFO\src\SimpleFIFO.cpp">
@@ -48,6 +51,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\SIGNALDuino\src\_micro-api\libraries\output\src\output.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\_micro-api\libraries\WIFIManager\WiFiManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -1,7 +1,7 @@
 
 
 #define PROGNAME               "RF_RECEIVER"
-#define PROGVERS               "3.3.0"
+#define PROGVERS               "3.3.1-dev"
 
 
 #define PIN_RECEIVE            2
@@ -12,7 +12,8 @@
 #define DEBUG				   1
 
 
-
+#define ETHERNET_PRINT
+#include <ESP8266WiFi.h>
 #include <output.h>
 #include <bitstore.h>  // Die wird aus irgend einem Grund zum Compilieren benoetigt.
 #include <SimpleFIFO.h>
@@ -51,6 +52,7 @@ os_timer_t cronTimer;
 // EEProm Addresscommands
 #define addr_init 0
 #define addr_features 1
+#define MAX_SRV_CLIENTS 2
 
 
 
@@ -71,16 +73,80 @@ void configCMD();
 void storeFunctions(const int8_t ms = 1, int8_t mu = 1, int8_t mc = 1);
 void getFunctions(bool *ms, bool *mu, bool *mc);
 
-#include <ESP8266WiFi.h>
+
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
 
+bool startWPS() {
+	// from https://gist.github.com/copa2/fcc718c6549721c210d614a325271389
+	// wpstest.ino
+	Serial.println("WPS config start");
+	bool wpsSuccess = WiFi.beginWPSConfig();
+	if (wpsSuccess) {
+		// Well this means not always success :-/ in case of a timeout we have an empty ssid
+		String newSSID = WiFi.SSID();
+		if (newSSID.length() > 0) {
+			// WPSConfig has already connected in STA mode successfully to the new station. 
+			Serial.printf("WPS finished. Connected successfull to SSID '%s'\n", newSSID.c_str());
+		}
+		else {
+			wpsSuccess = false;
+		}
+	}
+	return wpsSuccess;
+}
+
+
+WiFiServer Server(23);  //  port 23 = telnet
+WiFiClient serverClient;
 
 void setup() {
 	//ESP.wdtEnable(2000);
-    Serial.begin(115200);
-  Serial.println();
+  Serial.begin(115200);
+  
+  #ifdef DEBUG
+  Serial.printf("\nTry connecting to WiFi with SSID '%s'\n", WiFi.SSID().c_str());
+  #endif
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // reading data from EPROM, 
+  while (WiFi.status() == WL_DISCONNECTED) {          // last saved credentials
+	  delay(500);
+	  Serial.print(".");
+  }
+  wl_status_t status = WiFi.status();
+  if (status == WL_CONNECTED) {
+  #ifdef DEBUG 
+	   Serial.printf("\nConnected successful to SSID '%s'\n", WiFi.SSID().c_str());
+  #endif
+  }
+  else {
+	Serial.printf("\nCould not connect to WiFi. state='%d'\n", status);
+	Serial.println("Please press WPS button on your router");
+	delay(5000);
+	if (!startWPS()) {
+		Serial.println("Failed to connect with WPS :-(");
+	}
+	else 
+	{
+		WiFi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // reading data from EPROM, 
+		while (WiFi.status() == WL_DISCONNECTED) {          // last saved credentials
+			delay(500);
+			Serial.print("."); // show wait for connect to AP
+	}
+
+
+  }
+
+  #ifdef DEBUG
+		Serial.print("\nReady! Use 'telnet ");
+	  Serial.print(WiFi.localIP());
+	  Serial.println(" port 23' to connect");
+  #endif
+  }
+
+
+
   WiFiManager wifiManager;
   wifiManager.setBreakAfterConfig(true);
   //reset settings - for testing
@@ -130,6 +196,8 @@ void setup() {
 	Serial.println("Init eeprom to defaults after flash");
 	#endif
 	}*/
+	Server.begin();  // telnet server
+	Server.setNoDelay(true);
 
 	enableReceive();
 	cmdstring.reserve(20);
@@ -146,6 +214,10 @@ void loop() {
 	static int aktVal = 0;
 	bool state;
 	serialEvent();
+	ethernetEvent();
+
+
+
 	if (command_available) {
 		command_available = false;
 		HandleCommand();
@@ -536,6 +608,22 @@ void configCMD()
 }
 
 
+inline void ethernetEvent()
+{
+	//check if there are any new clients
+	if (Server.hasClient()) {
+		if (!serverClient || !serverClient.connected()) {
+			if (serverClient) serverClient.stop();
+			serverClient = Server.available();
+			DBG_PRINTLN("New client: ");
+			return;
+		}
+		//no free/disconnected spot so reject
+//		WiFiClient newClient = Server.available();
+//		newClient.stop();
+	}
+
+}
 
 void serialEvent()
 {
@@ -560,8 +648,8 @@ void serialEvent()
 
 int freeRam() {
 
-	system_get_free_heap_size()
-	return 0;
+	return system_get_free_heap_size();
+	
 
 }
 
