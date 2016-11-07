@@ -37,6 +37,13 @@
 #else
 	#include "WProgram.h"
 #endif
+
+
+
+
+
+
+
 #include <bitstore.h>
 
 #define maxNumPattern 6

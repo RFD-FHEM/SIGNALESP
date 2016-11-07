@@ -30,6 +30,8 @@
 
 */
 #include "signalDecoder.h"
+#define ETHERNET_PRINT;
+#include <output.h>
 
 
 void SignalDetectorClass::bufferMove(const uint8_t start)
@@ -816,15 +818,15 @@ bool SignalDetectorClass::getSync()
 
 void SignalDetectorClass::printMsgStr(const String * first, const String * second, const String * third)
 {
-	Serial.print(*first);
-	Serial.print(*second);
-	Serial.print(*third);
+	MSG_PRINT(*first);
+	MSG_PRINT(*second);
+	MSG_PRINT(*third);
 
 }
 
 int8_t SignalDetectorClass::printMsgRaw(uint8_t m_start, const uint8_t m_end, const String * preamble, const String * postamble)
 {
-	Serial.print(*preamble);
+	MSG_PRINT(*preamble);
 	//String msg;
 	//msg.reserve(m_end-mstart);
 	byte crcv = 0x00;
@@ -832,13 +834,13 @@ int8_t SignalDetectorClass::printMsgRaw(uint8_t m_start, const uint8_t m_end, co
 	{
 		//msg + =message[m_start];
 		//Serial.print((100*message[m_start])+(10*message[m_start])+message[m_start]);
-		Serial.print(message[m_start]);
+		MSG_PRINT(message[m_start]);
 #ifndef ARDUSIM
 		//crcv = _crc_ibutton_update(crcv, message[m_start]);
 #endif
 	}
 	//Serial.print(msg);
-	Serial.print(*postamble);
+	MSG_PRINT(*postamble);
 	return crcv;
 	//printMsgStr(preamble,&msg,postamble);}
 }
