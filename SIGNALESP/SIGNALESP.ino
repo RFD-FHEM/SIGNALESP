@@ -210,6 +210,9 @@ void cronjob(void *pArg) {
 
 }
 
+
+uint8_t fifousage = 0;
+
 void loop() {
 	static int aktVal = 0;
 	bool state;
@@ -225,7 +228,7 @@ void loop() {
 		blinkLED = true;
 	}
 	yield();
-
+	if (fifousage < FiFo.count()) fifousage = FiFo.count();
 	while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
 
 		aktVal = FiFo.dequeue();
@@ -484,6 +487,7 @@ void HandleCommand()
 #define  cmd_ping 'P'
 #define  cmd_config 'C'
 #define  cmd_getConfig 'G' //decrepated
+#define  cmd_buffer 'B'
 
 
 	if (cmdstring.charAt(0) == cmd_ping) {
@@ -501,6 +505,7 @@ void HandleCommand()
 		MSG_PRINT(cmd_ping); MSG_PRINT(cmd_space);
 		MSG_PRINT(cmd_config); MSG_PRINT(cmd_space);
 		MSG_PRINT(cmd_getConfig); MSG_PRINT(cmd_space);  //decrepated
+		MSG_PRINT(cmd_buffer); MSG_PRINT(cmd_space);  //decrepated
 
 		MSG_PRINTLN("");
 	}
@@ -546,7 +551,9 @@ void HandleCommand()
 	else if (cmdstring.charAt(0) == cmd_getConfig) {
 		getConfig();
 	}
-	else {
+	else if (cmdstring.charAt(0) == cmd_buffer) {
+		MSG_PRINTLN(fifousage);
+	} else {
 		MSG_PRINTLN(F("Unsupported command"));
 	}
 }

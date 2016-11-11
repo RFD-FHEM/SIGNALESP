@@ -263,6 +263,8 @@ void SignalDetectorClass::compress_pattern()
 	calcHisto();
 	for (uint8_t idx = 0; idx<patternLen; idx++)
 	{
+		yield();
+
 		for (uint8_t idx2 = idx + 1; idx2<patternLen; idx2++)
 		{
 			const int16_t tol = int((abs(pattern[idx2])*tolFact) + (abs(pattern[idx2])*tolFact) / 2);
@@ -696,7 +698,8 @@ void SignalDetectorClass::calcHisto(const uint8_t startpos, uint8_t endpos)
 	{
 		histo[i] = 0;
 	}
-
+	
+	yield();
 	if (endpos == 0) endpos = messageLen;
 
 	for (uint8_t i = startpos; i<endpos; ++i)
@@ -752,6 +755,8 @@ bool SignalDetectorClass::getSync()
 
 	if (state == clockfound)		// we need a clock to find this type of sync
 	{
+		yield();
+
 		// clock wurde bereits durch getclock bestimmt.
 		for (int8_t p = patternLen - 1; p >= 0; --p)  // Schleife für langen Syncpuls
 		{
