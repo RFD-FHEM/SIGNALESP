@@ -8,7 +8,7 @@
 #define PIN_LED                16
 #define PIN_SEND               0
 #define BAUDRATE               115200
-#define FIFO_LENGTH			   100
+#define FIFO_LENGTH			   200
 #define DEBUG				   1
 
 
@@ -241,7 +241,7 @@ void loop() {
 
 
 //========================= Pulseauswertung ================================================
-void handleInterrupt() {
+void ICACHE_RAM_ATTR  handleInterrupt() {
 	const unsigned long Time = micros();
 	//const bool state = digitalRead(PIN_RECEIVE);
 	const unsigned long  duration = Time - lastTime;
