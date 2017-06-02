@@ -1,7 +1,9 @@
 
 
-#define PROGNAME               "RF_RECEIVER"
+#define PROGNAME               "RF_RECEIVER-ESP"
 #define PROGVERS               "3.3.1-dev"
+#define VERSION_1               0x33
+#define VERSION_2               0x1d
 
 
 #define PIN_RECEIVE            2
@@ -52,6 +54,7 @@ os_timer_t cronTimer;
 // EEProm Addresscommands
 #define addr_init 0
 #define addr_features 1
+#define EE_MAGIC_OFFSET      0
 #define MAX_SRV_CLIENTS 2
 
 
@@ -104,7 +107,10 @@ WiFiClient serverClient;
 void setup() {
 	//ESP.wdtEnable(2000);
   Serial.begin(115200);
-  
+  while (!Serial)
+  {
+	  delay(90);
+  }
   #ifdef DEBUG
   Serial.printf("\nTry connecting to WiFi with SSID '%s'\n", WiFi.SSID().c_str());
   #endif
@@ -171,16 +177,13 @@ void setup() {
   Serial.println(WiFi.localIP());
 
 
-#ifdef DEBUG
-	Serial.println("Using sFIFO");
-#endif
+
 	//pinMode(PIN_RECEIVE, INPUT);
 	//pinMode(PIN_SEND, OUTPUT);
 	//pinMode(PIN_LED, OUTPUT);
-	os_timer_setfn(&cronTimer, cronjob, NULL);
-	os_timer_arm(&cronTimer, 31, true);
-	
-	musterDec.MSenabled = musterDec.MUenabled = musterDec.MCenabled = true;
+  
+	initEEPROM();
+	//musterDec.MSenabled = musterDec.MUenabled = musterDec.MCenabled = true;
 	/*
 	if (EEPROM.read(addr_init) == 0xB)
 	{
@@ -199,15 +202,17 @@ void setup() {
 	Server.begin();  // telnet server
 	Server.setNoDelay(true);
 
+	os_timer_disarm(&cronTimer);
+	os_timer_setfn(&cronTimer, cronjob, NULL);
+	os_timer_arm(&cronTimer, 31, true);
+
 	enableReceive();
-	cmdstring.reserve(20);
+	cmdstring.reserve(40);
 }
 
-void cronjob(void *pArg) {
-
+void ICACHE_RAM_ATTR cronjob(void *pArg) {
 	digitalWrite(PIN_LED, blinkLED);
 	blinkLED = false;
-
 }
 
 
@@ -630,6 +635,7 @@ inline void ethernetEvent()
 //		WiFiClient newClient = Server.available();
 //		newClient.stop();
 	}
+	yield();
 
 }
 
@@ -706,13 +712,22 @@ void storeFunctions(const int8_t ms, int8_t mu, int8_t mc)
 {
 	mu = mu << 1;
 	mc = mc << 2;
+	EEPROM.begin(512); //Max bytes of eeprom to use
+	yield();
+	
+
 	int8_t dat = ms | mu | mc;
 	EEPROM.write(addr_features, dat);
+	EEPROM.commit();
+	EEPROM.end();
 }
 
 void getFunctions(bool *ms, bool *mu, bool *mc)
 {
+	EEPROM.begin(512); //Max bytes of eeprom to use
+	yield();
 	int8_t dat = EEPROM.read(addr_features);
+	EEPROM.end();
 
 	*ms = bool(dat &(1 << 0));
 	*mu = bool(dat &(1 << 1));
@@ -721,3 +736,30 @@ void getFunctions(bool *ms, bool *mu, bool *mc)
 
 }
 
+
+void initEEPROM(void) {
+	EEPROM.begin(512); //Max bytes of eeprom to use
+	yield();
+	if (EEPROM.read(EE_MAGIC_OFFSET) == VERSION_1 && EEPROM.read(EE_MAGIC_OFFSET + 1) == VERSION_2) {
+		DBG_PRINTLN("Reading values fom eeprom");
+	}
+	else {
+		storeFunctions(1, 1, 1);    // Init EEPROM with all flags enabled
+		storeFunctions(1, 1, 1);    // Init EEPROM with all flags enabled
+									 //hier fehlt evtl ein getFunctions()
+		DBG_PRINTLN("Init eeprom to defaults after flash");
+		EEPROM.write(EE_MAGIC_OFFSET, VERSION_1);
+		EEPROM.write(EE_MAGIC_OFFSET + 1, VERSION_2);
+		    // if (hasCC1101) {                // der ccFactoryReset muss auch durchgefuehrt werden, wenn der cc1101 nicht erkannt wurde
+		//cc1101::ccFactoryReset();
+		EEPROM.write(EE_MAGIC_OFFSET, VERSION_1);
+		EEPROM.write(EE_MAGIC_OFFSET + 1, VERSION_2);
+		    // if (hascc1101) {                // der ccFactoryReset muss auch durchgefuehrt werden, wenn der cc1101 nicht erkannt wurde
+			//cc1101::ccFactoryReset();
+		//}
+	}
+	EEPROM.commit();
+	EEPROM.end();
+	getFunctions(&musterDec.MSenabled, &musterDec.MUenabled, &musterDec.MCenabled);
+	
+}
