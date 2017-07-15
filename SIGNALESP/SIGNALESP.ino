@@ -5,16 +5,18 @@
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
 
+#define CMP_CC1101
 
 #define PIN_RECEIVE            2
 #define PIN_LED                16
 #define PIN_SEND               0
 #define BAUDRATE               115200
-#define FIFO_LENGTH			   200
-#define DEBUG				   1
+#define FIFO_LENGTH			       200
+#define DEBUG				           1
 
 
 #define ETHERNET_PRINT
+#include <EEPROM.h>
 #include <ESP8266WiFi.h>
 #include <output.h>
 #include <bitstore.h>  // Die wird aus irgend einem Grund zum Compilieren benoetigt.
@@ -25,15 +27,14 @@ SimpleFIFO<int, FIFO_LENGTH> FiFo; //store FIFO_LENGTH # ints
 SignalDetectorClass musterDec;
 
 
-#include <EEPROM.h>
-
+#ifdef CMP_CC1101
+  #include "cc1101.h"
+#endif
 
 #define pulseMin  90
 volatile bool blinkLED = false;
 String cmdstring = "";
 volatile unsigned long lastTime = micros();
-
-
 
 #define digitalLow(P) digitalWrite(P,LOW)
 #define digitalHigh(P) digitalWrite(P,HIGH)
@@ -45,21 +46,19 @@ extern "C" {
 #include "user_interface.h"
 }
 
-
 os_timer_t cronTimer;
 
 
-
+bool hasCC1101 = false;
 
 // EEProm Addresscommands
-#define addr_init 0
-#define addr_features 1
 #define EE_MAGIC_OFFSET      0
+#define addr_features EE_MAGIC_OFFSET+2
 #define MAX_SRV_CLIENTS 2
 
 
 
-//void handleInterrupt();
+void handleInterrupt();
 void enableReceive();
 void disableReceive();
 void serialEvent();
@@ -75,6 +74,7 @@ void getPing();
 void configCMD();
 void storeFunctions(const int8_t ms = 1, int8_t mu = 1, int8_t mc = 1);
 void getFunctions(bool *ms, bool *mu, bool *mc);
+uint8_t rssiCallback() { return 0; }; // Dummy return if no rssi value can be retrieved from receiver
 
 
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
@@ -106,13 +106,36 @@ WiFiClient serverClient;
 
 void setup() {
 	//ESP.wdtEnable(2000);
+
   Serial.begin(115200);
+
   while (!Serial)
-  {
-	  delay(90);
-  }
+    delay(90);
+
+  Serial.println("\n\n");
+
+  pinMode(PIN_RECEIVE, INPUT);
+  pinMode(PIN_LED, OUTPUT);
+  
+#ifdef CMP_CC1101
+  cc1101::setup();
+#endif
+
+  initEEPROM();
+
+#ifdef CMP_CC1101
+  cc1101::CCinit();
+  hasCC1101 = cc1101::checkCC1101();
+  
+  if (hasCC1101) {
+      DBG_PRINTLN("CC1101 found");
+//      musterDec.setRSSICallback(&cc1101::getRSSI);                    // Provide the RSSI Callback
+  }// else
+//      musterDec.setRSSICallback(&rssiCallback); // Provide the RSSI Callback    
+#endif
+  
   #ifdef DEBUG
-  Serial.printf("\nTry connecting to WiFi with SSID '%s'\n", WiFi.SSID().c_str());
+    Serial.printf("\nTry connecting to WiFi with SSID '%s'\n", WiFi.SSID().c_str());
   #endif
   WiFi.mode(WIFI_STA);
   WiFi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // reading data from EPROM, 
@@ -151,8 +174,6 @@ void setup() {
   #endif
   }
 
-
-
   WiFiManager wifiManager;
   wifiManager.setBreakAfterConfig(true);
   //reset settings - for testing
@@ -176,29 +197,6 @@ void setup() {
   Serial.println("local ip");
   Serial.println(WiFi.localIP());
 
-
-
-	//pinMode(PIN_RECEIVE, INPUT);
-	//pinMode(PIN_SEND, OUTPUT);
-	//pinMode(PIN_LED, OUTPUT);
-  
-	initEEPROM();
-	//musterDec.MSenabled = musterDec.MUenabled = musterDec.MCenabled = true;
-	/*
-	if (EEPROM.read(addr_init) == 0xB)
-	{
-	#ifdef DEBUG
-	Serial.println("Reading values fom eeprom");
-	#endif
-	getFunctions(&musterDec.MSenabled, &musterDec.MUenabled, &musterDec.MCenabled);
-	}
-	else {
-	EEPROM.write(addr_init, 0xB);
-	storeFunctions(1, 1, 1);    // Init EEPROM with all flags enabled
-	#ifdef DEBUG
-	Serial.println("Init eeprom to defaults after flash");
-	#endif
-	}*/
 	Server.begin();  // telnet server
 	Server.setNoDelay(true);
 
@@ -206,7 +204,13 @@ void setup() {
 	os_timer_setfn(&cronTimer, cronjob, NULL);
 	os_timer_arm(&cronTimer, 31, true);
 
-	enableReceive();
+  if (!hasCC1101 || cc1101::regCheck()) {
+    enableReceive();
+    DBG_PRINTLN(F("receiver enabled"));
+  } else {
+    DBG_PRINTLN(F("cc1101 is not correctly set. Please do a factory reset via command e"));
+  }
+
 	cmdstring.reserve(40);
 }
 
@@ -241,6 +245,27 @@ void loop() {
 		if (state) blinkLED = true; //LED blinken, wenn Meldung dekodiert
 		yield();
 	}
+
+  if (Serial.available()) {
+    int16_t sDuration = 620;
+
+    switch(Serial.read()) {
+      case 'b':
+        FiFo.enqueue(sDuration);
+        for (uint8_t i=0; i<55; i++) {
+          FiFo.enqueue(-sDuration*2);
+          FiFo.enqueue(sDuration);
+        }
+        FiFo.enqueue(-sDuration);
+        break;
+      case 'c':
+        Serial.println("currentMode: 0x" + String(cc1101::currentMode(), HEX));
+        break;
+      case 'd':
+        dumpEEPROM();
+        break;
+    }
+  }
 }
 
 
@@ -264,25 +289,35 @@ void ICACHE_RAM_ATTR  handleInterrupt() {
 		}
 		FiFo.enqueue(sDuration);
 	} // else => trash
-
 }
 
 void enableReceive() {
-	attachInterrupt(PIN_RECEIVE, handleInterrupt, CHANGE);
+  attachInterrupt(PIN_RECEIVE, handleInterrupt, CHANGE);
+  
+  #ifdef CMP_CC1101
+    if (hasCC1101)
+      cc1101::setReceiveMode();
+    Serial.println("receiver enabled!");
+  #endif
 }
 
 void disableReceive() {
-	detachInterrupt(PIN_RECEIVE);
+  detachInterrupt(PIN_RECEIVE);
+  
+  #ifdef CMP_CC1101
+    if (hasCC1101)
+      cc1101::setIdleMode();
+    Serial.println("receiver disabled!");
+  #endif
 }
-
-
-
 
 //============================== IT_Send =========================================
 
 //================================= RAW Send ======================================
 void send_raw(const uint8_t startpos, const uint16_t endpos, const int16_t *buckets, String *source = &cmdstring)
 {
+  pinMode(PIN_SEND, OUTPUT);
+  
 	uint8_t index = 0;
 	unsigned long stoptime = micros();
 	bool isLow;
@@ -310,11 +345,10 @@ void send_raw(const uint8_t startpos, const uint16_t endpos, const int16_t *buck
 }
 //SM;R=2;C=400;D=AFAFAF;
 
-
-
-
 void send_mc(const uint8_t startpos, const uint8_t endpos, const int16_t clock)
 {
+  pinMode(PIN_SEND, OUTPUT);
+  
 	int8_t b;
 	char c;
 	//digitalHigh(PIN_SEND);
@@ -373,6 +407,8 @@ struct s_sendcmd {
 
 void send_cmd()
 {
+  pinMode(PIN_SEND, OUTPUT);
+  
 #define combined 0
 #define manchester 1
 #define raw 2
@@ -455,6 +491,11 @@ void send_cmd()
 		}
 	}
 
+#ifdef CMP_CC1101
+  if (hasCC1101)
+    cc1101::setTransmitMode(); 
+#endif
+
 	for (uint8_t i = 0; i<repeats; i++)
 	{
 		for (uint8_t c = 0; c <= cmdNo; c++)
@@ -493,7 +534,12 @@ void HandleCommand()
 #define  cmd_config 'C'
 #define  cmd_getConfig 'G' //decrepated
 #define  cmd_buffer 'B'
+#define   cmd_write 'W'
+#define   cmd_patable 'x'
+#define   cmd_ccFactoryReset 'e'
+#define   cmd_read 'r'
 
+  uint8_t reg, val;
 
 	if (cmdstring.charAt(0) == cmd_ping) {
 		getPing();
@@ -516,7 +562,12 @@ void HandleCommand()
 	}
 	// V: Version
 	else if (cmdstring.charAt(0) == cmd_Version) {
-		MSG_PRINTLN("V " PROGVERS " SIGNALESP - compiled at " __DATE__ " " __TIME__);
+    MSG_PRINT("V " PROGVERS " SIGNALESP ");
+#ifdef CMP_CC1101
+    if (hasCC1101)
+      MSG_PRINT(F("cc1101"));
+#endif
+		MSG_PRINTLN(" - compiled at " __DATE__ " " __TIME__);
 	}
 	// R: FreeMemory
 	else if (cmdstring.charAt(0) == cmd_freeRam) {
@@ -558,8 +609,48 @@ void HandleCommand()
 	}
 	else if (cmdstring.charAt(0) == cmd_buffer) {
 		MSG_PRINTLN(fifousage);
+#ifdef CMP_CC1101
+	} else if (cmdstring.charAt(0) == cmd_read && isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2))) {             // R<adr>  read EEPROM
+    reg = cmdstringPos2int(1);
+    MSG_PRINT(F("EEPROM "));
+    printHex2(reg);
+    if (cmdstring.charAt(3) == 'n') {
+      MSG_PRINT(F(" :"));
+      for (uint8_t i = 0; i < 16; i++) {
+        MSG_PRINT(" ");
+        printHex2(EEPROM.read(reg + i));
+      }
+    } else {
+      MSG_PRINT(F(" = "));
+      printHex2(EEPROM.read(reg));
+    }
+    MSG_PRINTLN("");
+  } else if (cmdstring.charAt(0) == cmd_patable && isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && hasCC1101) {
+    val = cmdstringPos2int(1);
+    cc1101::writeCCpatable(val);
+    MSG_PRINT(F("Write "));
+    printHex2(val);
+    MSG_PRINTLN(F(" to PATABLE done"));
+    EEPROM.commit();
+  } else if (cmdstring.charAt(0) == cmd_ccFactoryReset && hasCC1101) { 
+    cc1101::ccFactoryReset();
+    cc1101::CCinit();
+    EEPROM.commit();
+	} else if (cmdstring.charAt(0) == cmd_write) {            // write EEPROM und CC11001 register
+    if (cmdstring.charAt(1) == 'S' && cmdstring.charAt(2) == '3' && hasCC1101)  {       // WS<reg>  Command Strobes
+      cc1101::commandStrobes();
+    } else if (isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && isHexadecimalDigit(cmdstring.charAt(3)) && isHexadecimalDigit(cmdstring.charAt(4))) {
+      reg = cmdstringPos2int(1);
+      val = cmdstringPos2int(3);
+      if (hasCC1101) {
+        cc1101::writeCCreg(reg, val);
+        EEPROM.commit();
+      }
+    }
+#endif
 	} else {
-		MSG_PRINTLN(F("Unsupported command"));
+		MSG_PRINT(F("Unsupported command"));
+    MSG_PRINTLN(" -> 0x" + String(cmdstring.charAt(0), HEX) + " " + cmdstring);
 	}
 }
 
@@ -613,8 +704,12 @@ void configCMD()
 	}
 	else if (cmdstring.charAt(1) == 'D') {  // Disable
 		*bptr = false;
-	}
-	else {
+#ifdef CMP_CC1101
+	} else if (isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && hasCC1101) {
+    uint8_t reg = cmdstringPos2int(1);
+    cc1101::readCCreg(reg);
+#endif
+  }	else {
 		return;
 	}
 	storeFunctions(musterDec.MSenabled, musterDec.MUenabled, musterDec.MCenabled);
@@ -712,54 +807,68 @@ void storeFunctions(const int8_t ms, int8_t mu, int8_t mc)
 {
 	mu = mu << 1;
 	mc = mc << 2;
-	EEPROM.begin(512); //Max bytes of eeprom to use
-	yield();
-	
-
 	int8_t dat = ms | mu | mc;
 	EEPROM.write(addr_features, dat);
-	EEPROM.commit();
-	EEPROM.end();
 }
 
 void getFunctions(bool *ms, bool *mu, bool *mc)
 {
-	EEPROM.begin(512); //Max bytes of eeprom to use
-	yield();
 	int8_t dat = EEPROM.read(addr_features);
-	EEPROM.end();
-
 	*ms = bool(dat &(1 << 0));
 	*mu = bool(dat &(1 << 1));
 	*mc = bool(dat &(1 << 2));
-
-
 }
 
+void dumpEEPROM() {
+  Serial.println("\ndump EEPROM:");
+  for (uint8_t i=0; i<56; i++) {
+    String temp=String(EEPROM.read(i), HEX);
+    Serial.print((temp.length() == 1 ? "0" : "") + temp + " ");
+    if ((i & 0x0F) == 0x0F)
+      Serial.println("");
+  }
+  Serial.println("");
+}
 
-void initEEPROM(void) {
+void initEEPROM() {
 	EEPROM.begin(512); //Max bytes of eeprom to use
-	yield();
+
 	if (EEPROM.read(EE_MAGIC_OFFSET) == VERSION_1 && EEPROM.read(EE_MAGIC_OFFSET + 1) == VERSION_2) {
 		DBG_PRINTLN("Reading values fom eeprom");
-	}
-	else {
-		storeFunctions(1, 1, 1);    // Init EEPROM with all flags enabled
+	} else {
+    DBG_PRINTLN("Init eeprom to defaults after flash");
+    EEPROM.write(EE_MAGIC_OFFSET, VERSION_1);
+    EEPROM.write(EE_MAGIC_OFFSET + 1, VERSION_2);
 		storeFunctions(1, 1, 1);    // Init EEPROM with all flags enabled
 									 //hier fehlt evtl ein getFunctions()
-		DBG_PRINTLN("Init eeprom to defaults after flash");
-		EEPROM.write(EE_MAGIC_OFFSET, VERSION_1);
-		EEPROM.write(EE_MAGIC_OFFSET + 1, VERSION_2);
-		    // if (hasCC1101) {                // der ccFactoryReset muss auch durchgefuehrt werden, wenn der cc1101 nicht erkannt wurde
-		//cc1101::ccFactoryReset();
-		EEPROM.write(EE_MAGIC_OFFSET, VERSION_1);
-		EEPROM.write(EE_MAGIC_OFFSET + 1, VERSION_2);
-		    // if (hascc1101) {                // der ccFactoryReset muss auch durchgefuehrt werden, wenn der cc1101 nicht erkannt wurde
-			//cc1101::ccFactoryReset();
-		//}
+#ifdef CMP_CC1101
+		cc1101::ccFactoryReset();
+#endif
+
+    EEPROM.commit();
 	}
-	EEPROM.commit();
-	EEPROM.end();
+
+#ifdef DEBUG
+  dumpEEPROM();
+#endif
+
 	getFunctions(&musterDec.MSenabled, &musterDec.MUenabled, &musterDec.MCenabled);
-	
+}
+
+uint8_t cmdstringPos2int(uint8_t pos) {
+  uint8_t val;
+  uint8_t hex;
+  
+   hex = (uint8_t)cmdstring.charAt(pos);
+   val = cc1101::hex2int(hex) * 16;
+   hex = (uint8_t)cmdstring.charAt(pos+1);
+   val = cc1101::hex2int(hex) + val;
+   return val;
+}
+
+void printHex2(const byte hex) {   // Todo: printf oder scanf nutzen
+  if (hex < 16) {
+    MSG_PRINT("0");
+  }
+  MSG_PRINT(hex, HEX);
 }
