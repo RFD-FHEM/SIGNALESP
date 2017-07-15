@@ -32,21 +32,21 @@ namespace cc1101 {
 
 	#ifndef PIN_SEND
 		#ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
-			#define PIN_SEND              9   // gdo0Pin TX out
 			#define PIN_RECEIVE				   7
 			#define digitalPinToInterrupt(p) ((p) == 0 ? 2 : ((p) == 1 ? 3 : ((p) == 2 ? 1 : ((p) == 3 ? 0 : ((p) == 7 ? 4 : NOT_AN_INTERRUPT)))))
 		#else 
-			#define PIN_LED               9
-			#define PIN_SEND              3   // gdo0Pin TX out
-			#define PIN_RECEIVE           2
+			#define PIN_RECEIVE           5
+      #define PIN_SEND              4   // gdo0Pin TX out
 		#endif
 	#endif
 
 	
-	#define CC1101_CONFIG      0x80
-	#define CC1101_STATUS      0xC0
-	#define CC1100_WRITE_BURST 0x40
-	#define CC1100_READ_BURST  0xC0
+	#define CC1100_WRITE_BURST    0x40
+  #define CC1101_WRITE_SINGLE   0x00
+  #define CC1100_READ_BURST     0xC0
+  #define CC1101_READ_SINGLE    0x80
+  #define CC1101_CONFIG         CC1101_READ_SINGLE
+  #define CC1101_STATUS         CC1100_READ_BURST
 	
 	#define CC1100_FREQ2       0x0D  // Frequency control word, high byte
 	#define CC1100_FREQ1       0x0E  // Frequency control word, middle byte
@@ -55,9 +55,11 @@ namespace cc1101 {
 	#define CC1100_IOCFG2      0x00  // GDO2 output configuration
 	#define CC1100_PKTCTRL0    0x08  // Packet config register
 
-	// Status registers
-	#define CC1100_RSSI      0x34 // Received signal strength indication
-	#define CC1100_MARCSTATE 0x35 // Control state machine state
+	// Status registers - older version base on 0x30
+  #define CC1101_PARTNUM      0xF0 // Chip ID
+  #define CC1101_VERSION      0xF1 // Chip ID
+  #define CC1100_RSSI         0xF4 // Received signal strength indication
+	#define CC1100_MARCSTATE    0xF5 // Control state machine state
 	 
 	// Strobe commands
 	#define CC1101_SRES     0x30  // reset
@@ -68,8 +70,34 @@ namespace cc1101 {
 	#define CC1100_SIDLE    0x36  // Exit RX / TX, turn off frequency synthesizer
 	#define CC1100_SAFC     0x37  // Perform AFC adjustment of the frequency synthesizer
 	#define CC1100_SFTX     0x3B  // Flush the TX FIFO buffer.
-	#define CC1101_SNOP 	0x3D	// 
+	#define CC1101_SNOP 	  0x3D	// 
 
+  enum CC1101_MarcState {
+    MarcStateSleep          = 0x00u
+  , MarcStateIdle           = 0x01u
+  , MarcStateXOff           = 0x02u
+  , MarcStateVConnManCal    = 0x03u
+  , MarcStateRegOnManCal    = 0x04u
+  , MarcStateManCal         = 0x05u
+  , MarcStateVConnFSWakeUp  = 0x06u
+  , MarcStateRegOnFSWakeUp  = 0x07u
+  , MarcStateStartCalibrate = 0x08u
+  , MarcStateBWBoost        = 0x09u
+  , MarcStateFSLock         = 0x0Au
+  , MarcStateIfadCon        = 0x0Bu
+  , MarcStateEndCalibrate   = 0x0Cu
+  , MarcStateRx             = 0x0Du
+  , MarcStateRxEnd          = 0x0Eu
+  , MarcStateRxRst          = 0x0Fu
+  , MarcStateTxRxSwitch     = 0x10u
+  , MarcStateRxFifoOverflow = 0x11u
+  , MarcStateFsTxOn         = 0x12u
+  , MarcStateTx             = 0x13u
+  , MarcStateTxEnd          = 0x14u
+  , MarcStateRxTxSwitch     = 0x15u
+  , MarcStateTxFifoUnerflow = 0x16u
+  };
+  
 #ifdef ESP8266
 	#define pinAsInput(pin) pinMode(pin, INPUT)
 	#define pinAsOutput(pin) pinMode(pin, OUTPUT)
@@ -122,7 +150,7 @@ namespace cc1101 {
 	#define CC1100_STATE_TX_UNDERFLOW              0x70
 	
 #ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
-	uint8_t RADINOVARIANT = 0;            // Standardwert welcher je radinoVarinat geändert wird
+	uint8_t RADINOVARIANT = 0;            // Standardwert welcher je radinoVarinat geï¿½ndert wird
 #endif
 	static const uint8_t initVal[] PROGMEM = 
 	{
@@ -199,15 +227,11 @@ namespace cc1101 {
 	}
 
 	uint8_t cmdStrobe(const uint8_t cmd) {                  // send command strobe to the CC1101 IC via SPI
-	#ifndef ESP8266
 		cc1101_Select();                                // select CC1101
 		wait_Miso();                                    // wait until MISO goes low
-	#endif
 		uint8_t ret = sendSPI(cmd);                     // send strobe command
-	#ifndef ESP8266
 		wait_Miso();                                    // wait until MISO goes low
 		cc1101_Deselect();                              // deselect CC1101
-	#endif
 		return ret;					// Chip Status Byte
 	}
 
@@ -378,10 +402,10 @@ namespace cc1101 {
 
 	bool checkCC1101() {
 
-		uint8_t partnum = readReg(0xF0,0x80);  // Partnum
-		uint8_t version = readReg(0xF1,0x80);  // Version
-		DBG_PRINT("CCVersion=");	DBG_PRINTLN(version);
-		DBG_PRINT("CCPartnum=");	DBG_PRINTLN(partnum);
+		uint8_t partnum = readReg(CC1101_PARTNUM, CC1101_READ_SINGLE);  // Partnum
+		uint8_t version = readReg(CC1101_VERSION, CC1101_READ_SINGLE);  // Version
+		DBG_PRINT("CCVersion=");	DBG_PRINTLN("0x" + String(version, HEX));
+		DBG_PRINT("CCPartnum=");	DBG_PRINTLN("0x" + String(partnum, HEX));
 
 		//checks if valid Chip ID is found. Usualy 0x03 or 0x14. if not -> abort
 		if (version == 0x00 || version == 0xFF)
@@ -407,7 +431,7 @@ namespace cc1101 {
 		#ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
 		pinAsInputPullUp(PIN_MARK433);
 		#endif
-		//// Änderungsbeginn  ---> 
+		//// ï¿½nderungsbeginn  ---> 
 
 #ifndef ESP8266
 		SPCR = _BV(SPE) | _BV(MSTR);               // SPI speed = CLK/4
@@ -429,12 +453,14 @@ namespace cc1101 {
 		SPI.setClockDivider(SPI_CLOCK_DIV4);
 #endif
 
-		pinAsInput(PIN_SEND);        // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
 #ifndef ESP8266
 		digitalHigh(csPin);                 // SPI init
 		digitalHigh(sckPin);
 		digitalLow(mosiPin);
 #endif
+
+    pinAsInput(PIN_RECEIVE);    // gdo2
+    pinAsOutput(PIN_SEND);      // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
 	}
 
 	uint8_t getRSSI()
@@ -449,7 +475,7 @@ namespace cc1101 {
 	}
 
 	uint8_t currentMode() {
-		return (cmdStrobe(CC1101_SNOP) & CC1100_STATUS_STATE_BM);
+		return readReg(CC1100_MARCSTATE, CC1100_READ_BURST);
 	}
 	
 	void setReceiveMode()
