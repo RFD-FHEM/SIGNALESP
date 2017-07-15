@@ -7,9 +7,9 @@
 
 #define CMP_CC1101
 
-#define PIN_RECEIVE            2
+//#define PIN_RECEIVE            5
 #define PIN_LED                16
-#define PIN_SEND               0
+//#define PIN_SEND               4
 #define BAUDRATE               115200
 #define FIFO_LENGTH			       200
 #define DEBUG				           1
@@ -58,7 +58,7 @@ bool hasCC1101 = false;
 
 
 
-void handleInterrupt();
+//void handleInterrupt();
 void enableReceive();
 void disableReceive();
 void serialEvent();
@@ -228,38 +228,27 @@ void loop() {
 	serialEvent();
 	ethernetEvent();
 
-
-
 	if (command_available) {
 		command_available = false;
 		HandleCommand();
 		if (!command_available) { cmdstring = ""; }
 		blinkLED = true;
 	}
-	yield();
-	if (fifousage < FiFo.count()) fifousage = FiFo.count();
+//	yield();
+	if (fifousage < FiFo.count())
+	  fifousage = FiFo.count();
 	while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
 
 		aktVal = FiFo.dequeue();
 		state = musterDec.decode(&aktVal);
 		if (state) blinkLED = true; //LED blinken, wenn Meldung dekodiert
-		yield();
 	}
 
   if (Serial.available()) {
-    int16_t sDuration = 620;
-
     switch(Serial.read()) {
-      case 'b':
-        FiFo.enqueue(sDuration);
-        for (uint8_t i=0; i<55; i++) {
-          FiFo.enqueue(-sDuration*2);
-          FiFo.enqueue(sDuration);
-        }
-        FiFo.enqueue(-sDuration);
-        break;
       case 'c':
-        Serial.println("currentMode: 0x" + String(cc1101::currentMode(), HEX));
+        Serial.println("marc: 0x" + String(cc1101::currentMode(), HEX));
+        Serial.println("fifo: " + String(FiFo.count()) + ", max. " + String(fifousage));
         break;
       case 'd':
         dumpEEPROM();
@@ -292,22 +281,20 @@ void ICACHE_RAM_ATTR  handleInterrupt() {
 }
 
 void enableReceive() {
-  attachInterrupt(PIN_RECEIVE, handleInterrupt, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(PIN_RECEIVE), handleInterrupt, CHANGE);
   
   #ifdef CMP_CC1101
     if (hasCC1101)
       cc1101::setReceiveMode();
-    Serial.println("receiver enabled!");
   #endif
 }
 
 void disableReceive() {
-  detachInterrupt(PIN_RECEIVE);
+  detachInterrupt(digitalPinToInterrupt(PIN_RECEIVE));
   
   #ifdef CMP_CC1101
     if (hasCC1101)
       cc1101::setIdleMode();
-    Serial.println("receiver disabled!");
   #endif
 }
 
@@ -316,8 +303,6 @@ void disableReceive() {
 //================================= RAW Send ======================================
 void send_raw(const uint8_t startpos, const uint16_t endpos, const int16_t *buckets, String *source = &cmdstring)
 {
-  pinMode(PIN_SEND, OUTPUT);
-  
 	uint8_t index = 0;
 	unsigned long stoptime = micros();
 	bool isLow;
@@ -347,8 +332,6 @@ void send_raw(const uint8_t startpos, const uint16_t endpos, const int16_t *buck
 
 void send_mc(const uint8_t startpos, const uint8_t endpos, const int16_t clock)
 {
-  pinMode(PIN_SEND, OUTPUT);
-  
 	int8_t b;
 	char c;
 	//digitalHigh(PIN_SEND);
@@ -407,8 +390,6 @@ struct s_sendcmd {
 
 void send_cmd()
 {
-  pinMode(PIN_SEND, OUTPUT);
-  
 #define combined 0
 #define manchester 1
 #define raw 2
@@ -731,7 +712,6 @@ inline void ethernetEvent()
 //		newClient.stop();
 	}
 	yield();
-
 }
 
 void serialEvent()
