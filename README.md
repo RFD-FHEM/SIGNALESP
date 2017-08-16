@@ -14,6 +14,11 @@ IT Send commands are not available
 
 
 Just clone the repo and open the project file with Visual Studio / Visual Micro. (currently this works only for windows)
+In case you choose download ZIP, the subprojects used by this project are not downloaded in this zip. The preferred way is really to clone via git.
+In case, you still want to download via ZIP, you also have to download
+https://github.com/tzapu/WiFiManager/tree/master and place the content into 
+`SIGNALESP\src\_micro-api\libraries\WIFIManager`
+
 Compile it and have fun.
 If you are using the Arduino IDE, you have to copy all the libs into your sketch folder.
 
@@ -27,7 +32,7 @@ http://www.fhemwiki.de/wiki/SIGNALDuino
 
 ### Tested microcontrollers
 
-* Aduino Nano
+* ESP8266 (NodeMCU)
 
 ### Signal from my device ist not detected
 
