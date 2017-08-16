@@ -48,7 +48,7 @@ http://www.fhemwiki.de/wiki/SIGNALDuino
 
 ### Tested microcontrollers
 
-* Aduino Nano
+* ESP8266 (NodeMCU)
 
 ### Signal from my device ist not detected
 
