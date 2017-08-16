@@ -14,26 +14,10 @@ IT Send commands are not available
 
 
 Just clone the repo and open the project file with Visual Studio / Visual Micro. (currently this works only for windows)
-
-Create a file named configwifi.h and modify the ssid and password to your needs:
-
-```
-// configwifi.h
-
-#ifndef _CONFIGWIFI_h
-#define _CONFIGWIFI_h
-
-#if defined(ARDUINO) && ARDUINO >= 100
-	#include "arduino.h"
-#else
-	#include "WProgram.h"
-#endif
-
-//#define WIFI_Enable 1
-const char* ssid = "<yourssidhere>";
-const char* password = "<yourpasswordhere>";
-#endif
-```
+In case you choose download ZIP, the subprojects used by this project are not downloaded in this zip. The preferred way is really to clone via git.
+In case, you still want to download via ZIP, you also have to download
+https://github.com/tzapu/WiFiManager/tree/master and place the content into 
+`SIGNALESP\src\_micro-api\libraries\WIFIManager`
 
 Compile it and have fun.
 If you are using the Arduino IDE, you have to copy all the libs into your sketch folder.
