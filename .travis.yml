@@ -23,6 +23,8 @@ install:
   - arduino --board esp8266:esp8266:generic --save-prefs
   - arduino --pref "compiler.warning_level=all" --save-prefs
 script:
+  - "ls -l /usr/local/share/arduino/libraries/"
+  - "file /usr/local/share/arduino/libraries/*/*"
   - "echo $PWD"
   - "echo $HOME"
   - "ls $PWD"
