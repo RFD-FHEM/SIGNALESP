@@ -1,4 +1,4 @@
-language: c
+language: c++
 before_install:
   - "/sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_1.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :1 -ac -screen 0 1280x1024x16"
   - sleep 3
@@ -19,7 +19,6 @@ install:
   - ln -s $PWD/output /usr/local/share/arduino/libraries/output
   - ln -s $PWD/signalDecoder /usr/local/share/arduino/libraries/signalDecoder
   - ln -s $PWD/simpleFIFO /usr/local/share/arduino/libraries/simpleFIFO
-
   - arduino --install-boards esp8266:esp8266
   - arduino --board esp8266:esp8266:generic --save-prefs
   - arduino --pref "compiler.warning_level=all" --save-prefs
