@@ -16,6 +16,13 @@
 
 #define ETHERNET_PRINT
 #include <ESP8266WiFi.h>
+#include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
+#include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
+#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+
+WiFiServer Server(23);  //  port 23 = telnet
+WiFiClient serverClient;
+
 #include <output.h>
 #include <bitstore.h>  // Die wird aus irgend einem Grund zum Compilieren benoetigt.
 #include <SimpleFIFO.h>
@@ -77,9 +84,6 @@ void storeFunctions(const int8_t ms = 1, int8_t mu = 1, int8_t mc = 1);
 void getFunctions(bool *ms, bool *mu, bool *mc);
 
 
-#include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
-#include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
 
 bool startWPS() {
 	// from https://gist.github.com/copa2/fcc718c6549721c210d614a325271389
@@ -101,8 +105,7 @@ bool startWPS() {
 }
 
 
-WiFiServer Server(23);  //  port 23 = telnet
-WiFiClient serverClient;
+
 
 void setup() {
 	//ESP.wdtEnable(2000);
