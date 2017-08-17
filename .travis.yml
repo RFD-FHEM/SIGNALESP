@@ -1,4 +1,4 @@
-language: c++
+language: c
 before_install:
   - "/sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_1.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :1 -ac -screen 0 1280x1024x16"
   - sleep 3
@@ -8,14 +8,14 @@ before_install:
   - sudo mv arduino-1.6.5 /usr/local/share/arduino
   - sudo ln -s /usr/local/share/arduino/arduino /usr/local/bin/arduino
 install:
-  - git clone https://github.com/tzapu/WiFiManager.git /usr/local/share/arduino/libraries/WIFIManager
+  - git clone http://github.com/tzapu/WiFiManager.git /usr/local/share/arduino/libraries/WIFIManager
   #- ln -s $PWD /usr/local/share/arduino/libraries/WiFiManager
 # boards manager not working on 1.6.7 - 1.6.8
   - arduino --pref "boardsmanager.additional.urls=http://arduino.esp8266.com/stable/package_esp8266com_index.json" --save-prefs
 # install lib arduino json not working in 1.6.5
 #  - arduino --install-library "ArduinoJson"
   - git clone https://github.com/bblanchon/ArduinoJson /usr/local/share/arduino/libraries/ArduinoJson
-  - ln -s $PWD/bitstore /usr/local/share/arduino/libraries/WiFiManager
+  - ln -s $PWD/bitstore /usr/local/share/arduino/libraries/bitstore
   - ln -s $PWD/output /usr/local/share/arduino/libraries/output
   - ln -s $PWD/signalDecoder /usr/local/share/arduino/libraries/signalDecoder
   - ln -s $PWD/simpleFIFO /usr/local/share/arduino/libraries/simpleFIFO
@@ -23,15 +23,10 @@ install:
   - arduino --board esp8266:esp8266:generic --save-prefs
   - arduino --pref "compiler.warning_level=all" --save-prefs
 script:
-  - echo $PWD
-  - echo $HOME
-  - ls $PWD
-#  - source $TRAVIS_BUILD_DIR/travis/common.sh
-#  - build_examples
-#  - "cat $PWD/examples/AutoConnect/AutoConnect.ino"
-   - arduino -v --verbose-build --verify $PWD/SIGNALESP/SIGNALESP.ino 2>&1
-#  - arduino --verify --board arduino:avr:uno $PWD/examples/IncomingCall/IncomingCall.ino
-#  - arduino --verify --board arduino:avr:uno $PWD/examples/AdafruitIO_GPS/AdafruitIO_GPS.ino
+  - "echo $PWD"
+  - "echo $HOME"
+  - "ls $PWD"
+  - arduino -v --verbose-build --verify $PWD/SIGNALESP/SIGNALESP.ino 2>&1
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 notifications:
