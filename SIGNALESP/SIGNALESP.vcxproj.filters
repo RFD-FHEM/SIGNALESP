@@ -30,10 +30,10 @@
     <ClInclude Include="..\src\_micro-api\libraries\bitstore\src\bitstore.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\SIGNALDuino\src\_micro-api\libraries\output\src\output.h">
+    <ClInclude Include="..\src\_micro-api\libraries\WIFIManager\WiFiManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\_micro-api\libraries\WIFIManager\WiFiManager.h">
+    <ClInclude Include="..\src\_micro-api\libraries\output\src\output.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
