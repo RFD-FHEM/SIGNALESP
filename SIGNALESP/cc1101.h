@@ -8,11 +8,11 @@
 #else
 	#include "WProgram.h"
 #endif
-#include <EEPROM.h>
+#include "EEPROM.h"
 #include "output.h"
 
 #ifdef ESP8266
-	#include <SPI.h>
+	#include "SPI.h"
 #endif
 
 extern String cmdstring;
@@ -21,9 +21,11 @@ extern String cmdstring;
 
 namespace cc1101 {
 #if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101) || defined(ESP8266)
-//		#define SS					  8  
+  #ifndef ESP8266
+		#define SS					  8  
+  #endif
 	#define PIN_MARK433			  4  // LOW -> 433Mhz | HIGH -> 868Mhz
-	#endif
+#endif
 
 	#define csPin	SS	   // CSN  out
 	#define mosiPin MOSI   // MOSI out
