@@ -36,7 +36,7 @@ SignalDetectorClass musterDec;
 
 #ifdef CMP_CC1101
   #include "cc1101.h"
-  #include "SPI.h"      // prevent travis errors
+  #include <SPI.h>      // prevent travis errors
 #endif
 
 #define pulseMin  90

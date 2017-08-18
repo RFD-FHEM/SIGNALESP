@@ -8,11 +8,11 @@
 #else
 	#include "WProgram.h"
 #endif
-#include "EEPROM.h"
+#include <EEPROM.h>
 #include "output.h"
 
 #ifdef ESP8266
-	#include "SPI.h"
+	#include <SPI.h>
 #endif
 
 extern String cmdstring;
