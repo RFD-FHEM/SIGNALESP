@@ -256,6 +256,9 @@ void loop() {
       case 'd':
         dumpEEPROM();
         break;
+      case 'u':
+        Serial.println("uptime: " + uptime());
+        break;
     }
   }
 }
@@ -548,8 +551,19 @@ void HandleCommand()
 	else if (cmdstring.charAt(0) == cmd_Version) {
     MSG_PRINT("V " PROGVERS " SIGNALESP ");
 #ifdef CMP_CC1101
-    if (hasCC1101)
+    if (hasCC1101) {
       MSG_PRINT(F("cc1101"));
+      switch(cc1101::chipVersion()) {
+//        case 0x08:    // CC1101_VERSION 0x31
+        case 0x18:  // CC1101_VERSION 0xF1
+          MSG_PRINT(F(" 433MHz"));
+          break;
+        case 0x04:  // CC1101_VERSION 0x31
+        case 0x14:  // CC1101_VERSION 0xF1
+          MSG_PRINT(F(" 868MHz"));
+          break;
+      }
+    }
 #endif
 		MSG_PRINTLN(" - compiled at " __DATE__ " " __TIME__);
 	}
@@ -855,3 +869,24 @@ void printHex2(const byte hex) {   // Todo: printf oder scanf nutzen
   }
   MSG_PRINT(hex, HEX);
 }
+
+String uptime() {
+  String result = "";
+
+  unsigned long uptime = (millis() / 1000);
+
+  uint8_t uptimeDays = uptime / 86400;
+  if (uptimeDays > 0)
+    result += String(uptimeDays) + "d, ";
+  uptime %= 86400;
+  uint8_t hours = uptime / 3600;
+  result += String(hours < 10 ? String("0") + hours : hours) + ":";
+  uptime %= 3600;
+  uint8_t minutes = uptime / 60;
+  result += String(minutes < 10 ? String("0") + minutes : minutes) + ".";
+  uptime %= 60;
+  result += String(uptime < 10 ? String("0") + uptime : uptime);
+
+  return result;
+}
+
