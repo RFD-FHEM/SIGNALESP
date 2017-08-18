@@ -108,7 +108,8 @@ namespace cc1101 {
 #endif
 
 	#define wait_Miso()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return; miso_count--; }      // wait until SPI MISO line goes low 
-		
+    #define wait_Miso_rf()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return false; miso_count--; }      // wait until SPI MISO line goes low 
+
 	#define cc1101_Select()   digitalLow(csPin)          // select (SPI) CC1101
 	#define cc1101_Deselect() digitalHigh(csPin) 
 	
@@ -215,18 +216,18 @@ namespace cc1101 {
 	#endif
 	}
 
-	uint8_t cmdStrobe(const uint8_t cmd) {                  // send command strobe to the CC1101 IC via SPI
+	uint8_t cmdStrobe(const uint8_t cmd) {              // send command strobe to the CC1101 IC via SPI
 		cc1101_Select();                                // select CC1101
-		wait_Miso();                                    // wait until MISO goes low
+		wait_Miso_rf();                                 // wait until MISO goes low
 		uint8_t ret = sendSPI(cmd);                     // send strobe command
-		wait_Miso();                                    // wait until MISO goes low
+		wait_Miso_rf();                                 // wait until MISO goes low
 		cc1101_Deselect();                              // deselect CC1101
-		return ret;					// Chip Status Byte
+		return ret;										// Chip Status Byte
 	}
 
 	uint8_t readReg(const uint8_t regAddr, const uint8_t regType) {       // read CC1101 register via SPI
 		cc1101_Select();                                // select CC1101
-		wait_Miso();                                    // wait until MISO goes low
+		wait_Miso_rf();                                    // wait until MISO goes low
 		sendSPI(regAddr | regType);                     // send register address
 		uint8_t val = sendSPI(0x00);                    // read result
 		cc1101_Deselect();                              // deselect CC1101
@@ -424,32 +425,17 @@ namespace cc1101 {
 
 #ifndef ESP8266
 		SPCR = _BV(SPE) | _BV(MSTR);               // SPI speed = CLK/4
-		/*
-		SPCR = ((1 << SPE) |               		// SPI Enable
-		(0 << SPIE) |              		// SPI Interupt Enable
-		(0 << DORD) |              		// Data Order (0:MSB first / 1:LSB first)
-		(1 << MSTR) |              		// Master/Slave select
-		(0 << SPR1) | (0 << SPR0) |   		// SPI Clock Rate
-		(0 << CPOL) |             		// Clock Polarity (0:SCK low / 1:SCK hi when idle)
-		(0 << CPHA));             		// Clock Phase (0:leading / 1:trailing edge sampling)
-
-		SPSR = (1 << SPI2X);             		// Double Clock Rate
-		*/
+		digitalHigh(csPin);                 // SPI init
+		digitalHigh(sckPin);
+		digitalLow(mosiPin);
 #else
 		SPI.setDataMode(SPI_MODE0);
 		SPI.setBitOrder(MSBFIRST);
 		SPI.begin();
 		SPI.setClockDivider(SPI_CLOCK_DIV4);
 #endif
-
-#ifndef ESP8266
-		digitalHigh(csPin);                 // SPI init
-		digitalHigh(sckPin);
-		digitalLow(mosiPin);
-#endif
-
-    pinAsInput(PIN_RECEIVE);    // gdo2
-    pinAsOutput(PIN_SEND);      // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
+		pinAsInput(PIN_RECEIVE);    // gdo2
+		pinAsOutput(PIN_SEND);      // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
 	}
 
 	uint8_t getRSSI()
