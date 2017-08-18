@@ -5,7 +5,7 @@
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
 
-#define CMP_CC1101
+//#define CMP_CC1101
 
 
 #define PIN_RECEIVE            5
@@ -209,12 +209,16 @@ void setup() {
 	os_timer_setfn(&cronTimer, cronjob, NULL);
 	os_timer_arm(&cronTimer, 31, true);
 
-  if (!hasCC1101 || cc1101::regCheck()) {
-    enableReceive();
+#ifdef comp_cc1101
+	if (!hasCC1101 || cc1101::regCheck()) {
+#endif
+	enableReceive();
     DBG_PRINTLN(F("receiver enabled"));
+#ifdef comp_cc1101
   } else {
     DBG_PRINTLN(F("cc1101 is not correctly set. Please do a factory reset via command e"));
   }
+#endif
 
 	cmdstring.reserve(40);
 }
@@ -599,14 +603,17 @@ void HandleCommand()
 		else if (cmdstring.charAt(1) == 'S') {
 			configSET();
 		}
+#ifdef comp_cc1101
 		else if (isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && hasCC1101) {
 			reg = cmdstringPos2int(1);
 			cc1101::readCCreg(reg);
 		}
+#endif
 		else {
 			MSG_PRINTLN(F("Unsupported command"));
 		}
 	}
+#ifdef comp_cc1101
 	else if (cmdstring.charAt(0) == cmd_write) {            // write EEPROM und CC11001 register
 		if (cmdstring.charAt(1) == 'S' && cmdstring.charAt(2) == '3' && hasCC1101) {       // WS<reg>  Command Strobes
 			cc1101::commandStrobes();
@@ -652,6 +659,7 @@ void HandleCommand()
 		cc1101::ccFactoryReset();
 		cc1101::CCinit();
 	}
+#endif
 	else {
 		MSG_PRINT(F("Unsupported command"));
 		MSG_PRINTLN(" -> 0x" + String(cmdstring.charAt(0), HEX) + " " + cmdstring);
@@ -865,6 +873,7 @@ void initEEPROM() {
 	getFunctions(&musterDec.MSenabled, &musterDec.MUenabled, &musterDec.MCenabled);
 }
 
+#ifdef comp_cc1101
 uint8_t cmdstringPos2int(uint8_t pos) {
   uint8_t val;
   uint8_t hex;
@@ -882,6 +891,8 @@ void printHex2(const byte hex) {   // Todo: printf oder scanf nutzen
   }
   MSG_PRINT(hex, HEX);
 }
+#endif
+
 
 String uptime() {
   String result = "";
