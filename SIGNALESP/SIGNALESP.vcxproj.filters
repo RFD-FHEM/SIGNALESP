@@ -33,9 +33,6 @@
     <ClInclude Include="..\..\SIGNALDuino\src\_micro-api\libraries\output\src\output.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="configwifi.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\_micro-api\libraries\WIFIManager\WiFiManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>

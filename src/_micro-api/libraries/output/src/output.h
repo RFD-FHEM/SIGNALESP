@@ -4,13 +4,12 @@
 #define _OUTPUT_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
-	#include "arduino.h"
+	#include "Arduino.h"
 #else
 	#include "WProgram.h"
 #endif
 
 #ifdef ETHERNET_PRINT
-#include <wificlient.h>
 
 extern WiFiClient serverClient;
 
