@@ -7,9 +7,10 @@
 
 #define CMP_CC1101
 
-//#define PIN_RECEIVE            5
+
+#define PIN_RECEIVE            5
 #define PIN_LED                16
-//#define PIN_SEND               4
+#define PIN_SEND               4  // gdo0Pin TX out
 #define BAUDRATE               115200
 #define FIFO_LENGTH			       200
 #define DEBUG				           1

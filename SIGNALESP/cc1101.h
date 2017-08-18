@@ -20,7 +20,7 @@ extern String cmdstring;
 
 
 namespace cc1101 {
-#if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101) || defined(ESP8266)
+#if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101) 
   #ifndef ESP8266
 		#define SS					  8  
   #endif
@@ -32,15 +32,6 @@ namespace cc1101 {
 	#define misoPin MISO   // MISO in
 	#define sckPin  SCK    // SCLK out	
 
-	#ifndef PIN_SEND
-		#ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
-			#define PIN_RECEIVE				   7
-			#define digitalPinToInterrupt(p) ((p) == 0 ? 2 : ((p) == 1 ? 3 : ((p) == 2 ? 1 : ((p) == 3 ? 0 : ((p) == 7 ? 4 : NOT_AN_INTERRUPT)))))
-		#else 
-			#define PIN_RECEIVE           5
-      #define PIN_SEND              4   // gdo0Pin TX out
-		#endif
-	#endif
 
 	
 	#define CC1100_WRITE_BURST    0x40
@@ -116,11 +107,7 @@ namespace cc1101 {
 	#endif
 #endif
 
-#ifndef ESP8266
 	#define wait_Miso()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return; miso_count--; }      // wait until SPI MISO line goes low 
-#else
-	#define wait_Miso() 	while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) break; miso_count--; }      // wait until SPI MISO line goes low 
-#endif
 		
 	#define cc1101_Select()   digitalLow(csPin)          // select (SPI) CC1101
 	#define cc1101_Deselect() digitalHigh(csPin) 
