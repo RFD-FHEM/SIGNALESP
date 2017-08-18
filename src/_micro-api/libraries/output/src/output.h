@@ -10,19 +10,17 @@
 #endif
 
 #ifdef ETHERNET_PRINT
-
-extern WiFiClient serverClient;
-
-
-#define MSG_PRINTER serverClient // Not Implemented at this time
+	#include <ESP8266WiFi.h>
+	extern WiFiClient serverClient;
+	#define MSG_PRINTER serverClient // Not Implemented at this time
 #else
-#define MSG_PRINTER Serial
+	#define MSG_PRINTER Serial
 #endif
 
 #ifdef ETHERNET_DEBUG
-#define DBG_PRINTER Client // Not Implemented at this time
+	#define DBG_PRINTER Client // Not Implemented at this time
 #else
-#define DBG_PRINTER Serial
+	#define DBG_PRINTER Serial
 #endif
 
 #define MSG_PRINT(...) { MSG_PRINTER.print(__VA_ARGS__); }
