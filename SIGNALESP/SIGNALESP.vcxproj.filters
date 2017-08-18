@@ -47,9 +47,6 @@
     <ClCompile Include="..\src\_micro-api\libraries\bitstore\src\bitstore.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\SIGNALDuino\src\_micro-api\libraries\output\src\output.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\_micro-api\libraries\WIFIManager\WiFiManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
