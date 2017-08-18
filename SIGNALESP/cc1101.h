@@ -399,11 +399,11 @@ namespace cc1101 {
 		MSG_PRINTLN("ccFactoryReset done");  
 	}
 
-
+  uint8_t chipVersion() { return readReg(CC1101_VERSION, CC1101_READ_SINGLE); };
 	bool checkCC1101() {
 
 		uint8_t partnum = readReg(CC1101_PARTNUM, CC1101_READ_SINGLE);  // Partnum
-		uint8_t version = readReg(CC1101_VERSION, CC1101_READ_SINGLE);  // Version
+		uint8_t version = chipVersion();  // Version
 		DBG_PRINT("CCVersion=");	DBG_PRINTLN("0x" + String(version, HEX));
 		DBG_PRINT("CCPartnum=");	DBG_PRINTLN("0x" + String(partnum, HEX));
 
