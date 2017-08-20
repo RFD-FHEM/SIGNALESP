@@ -27,10 +27,10 @@ namespace cc1101 {
 	#define PIN_MARK433			  4  // LOW -> 433Mhz | HIGH -> 868Mhz
 #endif
 
-	#define csPin	SS	   // CSN  out
-	#define mosiPin MOSI   // MOSI out
-	#define misoPin MISO   // MISO in
-	#define sckPin  SCK    // SCLK out	
+	#define csPin	15   // CSN  out
+	#define mosiPin 13   // MOSI out
+	#define misoPin 12   // MISO in
+	#define sckPin  14   // SCLK out	
 
 
 	

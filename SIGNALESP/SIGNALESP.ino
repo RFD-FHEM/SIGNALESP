@@ -7,13 +7,17 @@
 
 //#define CMP_CC1101
 
+#ifdef CMP_CC1101
+	#define PIN_RECEIVE            5
+#else
+	#define PIN_RECEIVE            2
+#endif
 
-#define PIN_RECEIVE            5
 #define PIN_LED                16
 #define PIN_SEND               4  // gdo0Pin TX out
 #define BAUDRATE               115200
-#define FIFO_LENGTH			       200
-#define DEBUG				           1
+#define FIFO_LENGTH			   200
+#define DEBUG				   1
 
 
 #define ETHERNET_PRINT
@@ -113,7 +117,7 @@ void setup() {
 	//ESP.wdtEnable(2000);
 
   Serial.begin(115200);
-
+  Serial.setDebugOutput(true);
   while (!Serial)
     delay(90);
 
@@ -826,12 +830,14 @@ void storeFunctions(const int8_t ms, int8_t mu, int8_t mc)
 	mu = mu << 1;
 	mc = mc << 2;
 	int8_t dat = ms | mu | mc;
+	yield();
 	EEPROM.write(addr_features, dat);
 }
 
 void getFunctions(bool *ms, bool *mu, bool *mc)
 {
 	int8_t dat = EEPROM.read(addr_features);
+	yield();
 	*ms = bool(dat &(1 << 0));
 	*mu = bool(dat &(1 << 1));
 	*mc = bool(dat &(1 << 2));
@@ -850,6 +856,7 @@ void dumpEEPROM() {
 
 void initEEPROM() {
 	EEPROM.begin(512); //Max bytes of eeprom to use
+	yield();
 
 	if (EEPROM.read(EE_MAGIC_OFFSET) == VERSION_1 && EEPROM.read(EE_MAGIC_OFFSET + 1) == VERSION_2) {
 		DBG_PRINTLN("Reading values fom eeprom");
