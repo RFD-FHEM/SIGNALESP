@@ -97,6 +97,7 @@ inline void SignalDetectorClass::doDetect()
 									//if (messageLen == 0) valid = true;
 	if (!valid) {
 		// Try output
+		yield();
 		processMessage();
 		if (messageLen < minMessageLen) {
 			MsMoveCount = 3;
@@ -751,6 +752,7 @@ void SignalDetectorClass::calcHisto(const uint8_t startpos, uint8_t endpos)
 	{
 		histo[i] = 0;
 	}
+	yield();
 
 	if (endpos == 0) endpos = messageLen;
 	/*for (uint8_t i = startpos; i < endpos; i++)
@@ -820,6 +822,7 @@ bool SignalDetectorClass::getSync()
 
 	if (state == clockfound)		// we need a clock to find this type of sync
 	{
+		yield();
 		// clock wurde bereits durch getclock bestimmt.
 		for (int8_t p = patternLen - 1; p >= 0; --p)  // Schleife fuer langen Syncpuls
 		{
@@ -847,7 +850,6 @@ bool SignalDetectorClass::getSync()
 				//(syncMinFact*pattern[clock] <= syncabs)
 				)
 			{
-				yield();
 				//if ((syncMinFact* (pattern[clock]) <= -1*pattern[p])) {//n>9 => langer Syncpulse (als 10*int16 darstellbar
 				// Pruefe ob Sync und Clock valide sein koennen
 				//	if (histo[p] > 6) continue;    // Maximal 6 Sync Pulse  Todo: 6 Durch Formel relativ zu messageLen ersetzen
@@ -1342,6 +1344,7 @@ const bool ManchesterpatternDecoder::doDecode() {
 		}
 		//MSG_PRINT(" S MC ");
 		i++;
+		yield();
 	}
 	pdec->mend = i - (ht ? 0 : 1); // keep short in buffer;
 
@@ -1448,6 +1451,7 @@ const bool ManchesterpatternDecoder::isManchester()
 
 	for (uint8_t i = 0; i<p; i++)
 	{
+		yield();
 		if (pdec->pattern[sortedPattern[i]] <= 0) continue;
 #if DEBUGDETECT >= 2
 		DBG_PRINT("CLK="); DBG_PRINT(sortedPattern[i]); DBG_PRINT(":");
