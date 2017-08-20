@@ -5,7 +5,7 @@
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
 
-//#define CMP_CC1101
+#define CMP_CC1101
 
 #ifdef CMP_CC1101
 	#define PIN_RECEIVE            5
@@ -880,7 +880,7 @@ void initEEPROM() {
 	getFunctions(&musterDec.MSenabled, &musterDec.MUenabled, &musterDec.MCenabled);
 }
 
-#ifdef comp_cc1101
+#ifdef CMP_CC1101 
 uint8_t cmdstringPos2int(uint8_t pos) {
   uint8_t val;
   uint8_t hex;
