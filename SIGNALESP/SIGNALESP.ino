@@ -128,6 +128,10 @@ void setup() {
 
   Serial.println("\n\n");
 
+#ifdef DEBUG
+  Serial.println("SPI: MOSI " + String(MOSI) + ", MISO " + String(MISO) + ", SCK " + String(SCK) + ", CS " + String(SS));
+#endif
+
   pinMode(PIN_RECEIVE, INPUT);
   pinMode(PIN_LED, OUTPUT);
   
