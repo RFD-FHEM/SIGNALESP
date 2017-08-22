@@ -261,8 +261,8 @@ void loop() {
 #ifdef _DEBUG_DEV_SERIAL
   if (Serial.available()) {
     unsigned char c = Serial.read();
-    if (c != char(10))
-      Serial.println(".");
+//    if (c != char(10))
+//      Serial.println(".");
     switch(c) {
       case 'c':
         Serial.println("marc: 0x" + String(cc1101::currentMode(), HEX));
