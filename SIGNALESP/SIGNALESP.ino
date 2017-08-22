@@ -118,6 +118,10 @@ void setup() {
 
   Serial.println("\n\n");
 
+#ifdef DEBUG
+  Serial.println("SPI: MOSI " + String(MOSI) + ", MISO " + String(MISO) + ", SCK " + String(SCK) + ", CS " + String(SS));
+#endif
+
   pinMode(PIN_RECEIVE, INPUT);
   pinMode(PIN_LED, OUTPUT);
   
@@ -132,7 +136,7 @@ void setup() {
   hasCC1101 = cc1101::checkCC1101();
   
   if (hasCC1101) {
-      DBG_PRINTLN("CC1101 found");
+      DBG_PRINTLN("CC1101 found (rev. 0" + String(cc1101::getRevision(), HEX) + ")");
 //      musterDec.setRSSICallback(&cc1101::getRSSI);                    // Provide the RSSI Callback
   }// else
 //      musterDec.setRSSICallback(&rssiCallback); // Provide the RSSI Callback    
@@ -555,13 +559,16 @@ void HandleCommand()
     if (hasCC1101) {
       MSG_PRINT(F("cc1101"));
       switch(cc1101::chipVersion()) {
-//        case 0x08:    // CC1101_VERSION 0x31
+        case 0x08:  // CC1101_VERSION 0x31
         case 0x18:  // CC1101_VERSION 0xF1
           MSG_PRINT(F(" 433MHz"));
           break;
         case 0x04:  // CC1101_VERSION 0x31
         case 0x14:  // CC1101_VERSION 0xF1
           MSG_PRINT(F(" 868MHz"));
+          break;
+        default:
+          MSG_PRINT(" chip unkonwn 0x" + String(cc1101::chipVersion(), HEX));
           break;
       }
     }

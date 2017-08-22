@@ -20,10 +20,8 @@ extern String cmdstring;
 
 
 namespace cc1101 {
-#if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101) || defined(ESP8266)
-  #ifndef ESP8266
-		#define SS					  8  
-  #endif
+#if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101)
+	#define SS					  8  
 	#define PIN_MARK433			  4  // LOW -> 433Mhz | HIGH -> 868Mhz
 #endif
 
@@ -57,11 +55,19 @@ namespace cc1101 {
 	#define CC1100_IOCFG2      0x00  // GDO2 output configuration
 	#define CC1100_PKTCTRL0    0x08  // Packet config register
 
-	// Status registers - older version base on 0x30
-  #define CC1101_PARTNUM      0xF0 // Chip ID
-  #define CC1101_VERSION      0xF1 // Chip ID
-  #define CC1100_RSSI         0xF4 // Received signal strength indication
-	#define CC1100_MARCSTATE    0xF5 // Control state machine state
+  uint8_t revision = 0x01;
+  
+	// Status registers - newer version base on 0xF0
+  #define CC1101_PARTNUM_REV01      0xF0 // Chip ID
+  #define CC1101_VERSION_REV01      0xF1 // Chip ID
+  #define CC1100_RSSI_REV01         0xF4 // Received signal strength indication
+	#define CC1100_MARCSTATE_REV01    0xF5 // Control state machine state
+
+  // Status registers - older version base on 0x30
+  #define CC1101_PARTNUM_REV00      0x30 // Chip ID
+  #define CC1101_VERSION_REV00      0x31 // Chip ID
+  #define CC1100_RSSI_REV00         0x34 // Received signal strength indication
+  #define CC1100_MARCSTATE_REV00    0x35 // Control state machine state
 	 
 	// Strobe commands
 	#define CC1101_SRES     0x30  // reset
@@ -116,11 +122,7 @@ namespace cc1101 {
 	#endif
 #endif
 
-#ifndef ESP8266
-	#define wait_Miso()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return; miso_count--; }      // wait until SPI MISO line goes low 
-#else
-	#define wait_Miso() 	while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) break; miso_count--; }      // wait until SPI MISO line goes low 
-#endif
+	#define wait_Miso()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) break; miso_count--; }      // wait until SPI MISO line goes low 
 		
 	#define cc1101_Select()   digitalLow(csPin)          // select (SPI) CC1101
 	#define cc1101_Deselect() digitalHigh(csPin) 
@@ -401,11 +403,26 @@ namespace cc1101 {
 		MSG_PRINTLN("ccFactoryReset done");  
 	}
 
-  uint8_t chipVersion() { return readReg(CC1101_VERSION, CC1101_READ_SINGLE); };
+  uint8_t chipVersionRev()
+  {
+    return readReg((revision == 0x01 ? CC1101_VERSION_REV01 : CC1101_VERSION_REV00), CC1101_READ_SINGLE);
+  };
+  
+  uint8_t chipVersion() {
+    uint8_t version = chipVersionRev();
+ 
+    if (revision != 0x00 && (version == 0xFF || version == 0x00)) {
+      revision = 0x00;
+      version = chipVersionRev();
+    }
+    
+    return version;
+  }
+  
 	bool checkCC1101() {
 
-		uint8_t partnum = readReg(CC1101_PARTNUM, CC1101_READ_SINGLE);  // Partnum
-		uint8_t version = chipVersion();  // Version
+    uint8_t version = chipVersion();  // Version
+		uint8_t partnum = readReg((revision == 0x01 ? CC1101_PARTNUM_REV01 : CC1101_PARTNUM_REV00), CC1101_READ_SINGLE);  // Partnum
 		DBG_PRINT("CCVersion=");	DBG_PRINTLN("0x" + String(version, HEX));
 		DBG_PRINT("CCPartnum=");	DBG_PRINTLN("0x" + String(partnum, HEX));
 
@@ -431,7 +448,7 @@ namespace cc1101 {
 		pinAsOutput(csPin);                    // set pins for SPI communication
 		
 		#ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
-		pinAsInputPullUp(PIN_MARK433);
+		  pinAsInputPullUp(PIN_MARK433);
 		#endif
 		//// �nderungsbeginn  ---> 
 
@@ -465,9 +482,10 @@ namespace cc1101 {
     pinAsOutput(PIN_SEND);      // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
 	}
 
+  uint8_t getRevision() { return revision; }
 	uint8_t getRSSI()
 	{
-		return readReg(CC1100_RSSI, CC1101_STATUS);// Pruefen ob Umwandung von uint to int den richtigen Wert zurueck gibt
+		return readReg((revision == 0x01 ? CC1100_RSSI_REV01 : CC1100_RSSI_REV00), CC1101_STATUS);// Pruefen ob Umwandung von uint to int den richtigen Wert zurueck gibt
 	}
 	
 	inline void setIdleMode()
@@ -477,7 +495,7 @@ namespace cc1101 {
 	}
 
 	uint8_t currentMode() {
-		return readReg(CC1100_MARCSTATE, CC1100_READ_BURST);
+		return readReg((revision == 0x01 ? CC1100_MARCSTATE_REV01 : CC1100_MARCSTATE_REV00), CC1100_READ_BURST);
 	}
 	
 	void setReceiveMode()
