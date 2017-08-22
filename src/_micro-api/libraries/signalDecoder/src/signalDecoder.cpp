@@ -97,7 +97,7 @@ inline void SignalDetectorClass::doDetect()
 									//if (messageLen == 0) valid = true;
 	if (!valid) {
 		// Try output
-		yield();
+//		yield();
 		processMessage();
 		if (messageLen < minMessageLen) {
 			MsMoveCount = 3;
@@ -106,7 +106,8 @@ inline void SignalDetectorClass::doDetect()
 	}
 	else if (messageLen == minMessageLen) {
 		state = detecting;  // Set state to detecting, because we have more than minMessageLen data gathered, so this is no noise
-		rssiValue = _rssiCallback();
+		if (_rssiCallback != NULL)	// don't call uninitialized function pointer
+			rssiValue = _rssiCallback();
 	}
 
 	int8_t fidx = findpatt(*first);
@@ -163,8 +164,6 @@ inline void SignalDetectorClass::doDetect()
 	DBG_PRINT(", vcnt:");	DBG_PRINT(message.valcount);
 	DBG_PRINTLN(" ");
 #endif
-
-
 }
 
 bool SignalDetectorClass::decode(const int * pulse)
@@ -230,7 +229,7 @@ void SignalDetectorClass::compress_pattern()
 
 void SignalDetectorClass::processMessage()
 {
-	yield();
+//	yield();
 
 	if (mcDetected == true || messageLen >= minMessageLen) {
 		success = false;
@@ -752,7 +751,7 @@ void SignalDetectorClass::calcHisto(const uint8_t startpos, uint8_t endpos)
 	{
 		histo[i] = 0;
 	}
-	yield();
+//	yield();
 
 	if (endpos == 0) endpos = messageLen;
 	/*for (uint8_t i = startpos; i < endpos; i++)
@@ -763,7 +762,7 @@ void SignalDetectorClass::calcHisto(const uint8_t startpos, uint8_t endpos)
 	uint8_t bval;
 	for (uint8_t i = bstartpos; i<bendpos; ++i)
 	{
-		yield();
+//		yield();
 		message.getByte(i, &bval);
 		histo[bval >> 4]++;
 		histo[bval & B00001111]++;
@@ -822,7 +821,7 @@ bool SignalDetectorClass::getSync()
 
 	if (state == clockfound)		// we need a clock to find this type of sync
 	{
-		yield();
+//		yield();
 		// clock wurde bereits durch getclock bestimmt.
 		for (int8_t p = patternLen - 1; p >= 0; --p)  // Schleife fuer langen Syncpuls
 		{

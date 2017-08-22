@@ -19,24 +19,25 @@
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
 #define _DEBUG_DEV_SERIAL
+#define DEBUGDETECT 1
 
 
 #define ETHERNET_PRINT
-#include <EEPROM.h>
-#include <ESP8266WiFi.h>
-#include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
-#include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include "EEPROM.h"
+#include "ESP8266WiFi.h"
+#include "DNSServer.h"            //Local DNS Server used for redirecting all requests to the configuration portal
+#include "ESP8266WebServer.h"     //Local WebServer used to serve the configuration portal
+#include "WiFiManager.h"          //https://github.com/tzapu/WiFiManager
 
 WiFiServer Server(23);  //  port 23 = telnet
 WiFiClient serverClient;
 
-#include <output.h>
-#include <bitstore.h>  // Die wird aus irgend einem Grund zum Compilieren benoetigt.
-#include <SimpleFIFO.h>
+#include "output.h"
+#include "bitstore.h"  // Die wird aus irgend einem Grund zum Compilieren benoetigt.
+#include "SimpleFIFO.h"
 
 SimpleFIFO<int, FIFO_LENGTH> FiFo; //store FIFO_LENGTH # ints
-#include <signalDecoder.h>
+#include "signalDecoder.h"
 SignalDetectorClass musterDec;
 
 
@@ -123,10 +124,6 @@ void setup() {
     delay(90);
 
   Serial.println("\n\n");
-
-#ifdef DEBUG
-  Serial.println("SPI: MOSI " + String(MOSI) + ", MISO " + String(MISO) + ", SCK " + String(SCK) + ", CS " + String(SS));
-#endif
 
   pinMode(PIN_RECEIVE, INPUT);
   pinMode(PIN_LED, OUTPUT);
@@ -252,26 +249,32 @@ void loop() {
 		if (!command_available) { cmdstring = ""; }
 		blinkLED = true;
 	}
-	yield();
+
+//	yield();  // crep
 	if (fifousage < FiFo.count())
 	  fifousage = FiFo.count();
-	while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
-
-		aktVal = FiFo.dequeue();
-		state = musterDec.decode(&aktVal);
-		if (state) blinkLED = true; //LED blinken, wenn Meldung dekodiert
-		yield();
+  	while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
+  		aktVal = FiFo.dequeue();
+	  	state = musterDec.decode(&aktVal);
+		  if (state) blinkLED = true; //LED blinken, wenn Meldung dekodiert
+//		  yield();  // crep
 	}
 
 #ifdef _DEBUG_DEV_SERIAL
   if (Serial.available()) {
-    switch(Serial.read()) {
+    unsigned char c = Serial.read();
+    if (c != char(10))
+      Serial.println(".");
+    switch(c) {
       case 'c':
         Serial.println("marc: 0x" + String(cc1101::currentMode(), HEX));
         Serial.println("fifo: " + String(FiFo.count()) + ", max. " + String(fifousage));
         break;
       case 'd':
         dumpEEPROM();
+        break;
+      case 's':
+        MSG_PRINTLN("Test Test Test");
         break;
       case 'u':
         Serial.println("uptime: " + uptime());
@@ -574,11 +577,7 @@ void HandleCommand()
     if (hasCC1101) {
       MSG_PRINT(F("cc1101"));
       switch(cc1101::chipVersion()) {
-<<<<<<< HEAD
         case 0x08:  // CC1101_VERSION 0x31
-=======
-//      case 0x08:    // CC1101_VERSION 0x31
->>>>>>> refs/remotes/RFD-FHEM/dev-cc1101
         case 0x18:  // CC1101_VERSION 0xF1
           MSG_PRINT(F(" 433MHz"));
           break;
@@ -587,7 +586,7 @@ void HandleCommand()
           MSG_PRINT(F(" 868MHz"));
           break;
         default:
-          MSG_PRINT(" chip unkonwn 0x" + String(cc1101::chipVersion(), HEX));
+          MSG_PRINT(" chip unknown 0x" + String(cc1101::chipVersion(), HEX));
           break;
       }
     }
@@ -774,14 +773,15 @@ inline void ethernetEvent()
 		if (!serverClient || !serverClient.connected()) {
 			if (serverClient) serverClient.stop();
 			serverClient = Server.available();
-			DBG_PRINTLN("New client: ");
+			DBG_PRINT("New client: ");
+			DBG_PRINTLN(serverClient.remoteIP());
 			return;
 		}
 		//no free/disconnected spot so reject
 //		WiFiClient newClient = Server.available();
 //		newClient.stop();
 	}
-	yield();
+//	yield();
 }
 
 void serialEvent()
