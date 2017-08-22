@@ -37,6 +37,7 @@ WiFiClient serverClient;
 
 SimpleFIFO<int, FIFO_LENGTH> FiFo; //store FIFO_LENGTH # ints
 #include <signalDecoder.h>
+#include <FastDelegate.h> // prevent travis errors
 SignalDetectorClass musterDec;
 
 
