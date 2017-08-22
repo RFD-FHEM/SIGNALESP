@@ -38,6 +38,7 @@
 #endif
 #define DEBUG 1
 
+#define ETHERNET_PRINT
 #include "output.h"
 #include "bitstore.h"
 #include "FastDelegate.h"
