@@ -138,9 +138,9 @@ void setup() {
   
   if (hasCC1101) {
       DBG_PRINTLN("CC1101 found");
-//      musterDec.setRSSICallback(&cc1101::getRSSI);                    // Provide the RSSI Callback
+      musterDec.setRSSICallback(&cc1101::getRSSI);                    // Provide the RSSI Callback
   }// else
-//      musterDec.setRSSICallback(&rssiCallback); // Provide the RSSI Callback    
+      musterDec.setRSSICallback(&rssiCallback); // Provide the RSSI Callback    
 #endif
   
   #ifdef DEBUG
