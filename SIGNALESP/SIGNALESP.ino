@@ -7,12 +7,18 @@
 
 #define CMP_CC1101
 
-//#define PIN_RECEIVE            5
+#ifdef CMP_CC1101
+	#define PIN_RECEIVE            5
+#else
+	#define PIN_RECEIVE            2
+#endif
+
 #define PIN_LED                16
-//#define PIN_SEND               4
+#define PIN_SEND               4  // gdo0Pin TX out
 #define BAUDRATE               115200
-#define FIFO_LENGTH			       200
-#define DEBUG				           1
+#define FIFO_LENGTH			   200
+#define DEBUG				   1
+#define _DEBUG_DEV_SERIAL
 
 
 #define ETHERNET_PRINT
@@ -112,7 +118,7 @@ void setup() {
 	//ESP.wdtEnable(2000);
 
   Serial.begin(115200);
-
+  Serial.setDebugOutput(true);
   while (!Serial)
     delay(90);
 
@@ -212,12 +218,16 @@ void setup() {
 	os_timer_setfn(&cronTimer, cronjob, NULL);
 	os_timer_arm(&cronTimer, 31, true);
 
-  if (!hasCC1101 || cc1101::regCheck()) {
-    enableReceive();
+#ifdef CMP_CC1101
+	if (!hasCC1101 || cc1101::regCheck()) {
+#endif
+	enableReceive();
     DBG_PRINTLN(F("receiver enabled"));
+#ifdef CMP_CC1101
   } else {
     DBG_PRINTLN(F("cc1101 is not correctly set. Please do a factory reset via command e"));
   }
+#endif
 
 	cmdstring.reserve(40);
 }
@@ -242,7 +252,7 @@ void loop() {
 		if (!command_available) { cmdstring = ""; }
 		blinkLED = true;
 	}
-//	yield();
+	yield();
 	if (fifousage < FiFo.count())
 	  fifousage = FiFo.count();
 	while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
@@ -250,8 +260,10 @@ void loop() {
 		aktVal = FiFo.dequeue();
 		state = musterDec.decode(&aktVal);
 		if (state) blinkLED = true; //LED blinken, wenn Meldung dekodiert
+		yield();
 	}
 
+#ifdef _DEBUG_DEV_SERIAL
   if (Serial.available()) {
     switch(Serial.read()) {
       case 'c':
@@ -266,6 +278,7 @@ void loop() {
         break;
     }
   }
+#endif	// _DEBUG_DEV_SERIAL
 }
 
 
@@ -512,7 +525,8 @@ void send_cmd()
 
 void HandleCommand()
 {
-
+	uint8_t reg;
+	uint8_t val;
 #define  cmd_Version 'V'
 #define  cmd_freeRam 'R'
 #define  cmd_intertechno 'i'
@@ -524,14 +538,13 @@ void HandleCommand()
 #define  cmd_send 'S'
 #define  cmd_ping 'P'
 #define  cmd_config 'C'
-#define  cmd_getConfig 'G' //decrepated
 #define  cmd_buffer 'B'
-#define   cmd_write 'W'
-#define   cmd_patable 'x'
-#define   cmd_ccFactoryReset 'e'
-#define   cmd_read 'r'
+#define  cmd_write 'W'      // write EEPROM und write CC1101 register
+#define  cmd_read  'r'      // read EEPROM
+#define  cmd_patable 'x' 
+#define  cmd_ccFactoryReset 'e'  // EEPROM / factory reset
 
-  uint8_t reg, val;
+ 
 
 	if (cmdstring.charAt(0) == cmd_ping) {
 		getPing();
@@ -539,7 +552,6 @@ void HandleCommand()
 	else if (cmdstring.charAt(0) == cmd_help) {
 		MSG_PRINT(cmd_help);	MSG_PRINT(F(" Use one of "));
 		MSG_PRINT(cmd_Version); MSG_PRINT(cmd_space);
-		MSG_PRINT(cmd_intertechno); MSG_PRINT(cmd_space);
 		MSG_PRINT(cmd_freeRam); MSG_PRINT(cmd_space);
 		MSG_PRINT(cmd_uptime); MSG_PRINT(cmd_space);
 		MSG_PRINT(cmd_changeReceiver); MSG_PRINT(cmd_space);
@@ -547,9 +559,12 @@ void HandleCommand()
 		MSG_PRINT(cmd_send); MSG_PRINT(cmd_space);
 		MSG_PRINT(cmd_ping); MSG_PRINT(cmd_space);
 		MSG_PRINT(cmd_config); MSG_PRINT(cmd_space);
-		MSG_PRINT(cmd_getConfig); MSG_PRINT(cmd_space);  //decrepated
-		MSG_PRINT(cmd_buffer); MSG_PRINT(cmd_space);  //decrepated
-
+		MSG_PRINT(cmd_read); MSG_PRINT(cmd_space);
+		MSG_PRINT(cmd_write); MSG_PRINT(cmd_space);
+		if (hasCC1101) {
+			MSG_PRINT(cmd_patable); MSG_PRINT(cmd_space);
+			MSG_PRINT(cmd_ccFactoryReset); MSG_PRINT(cmd_space);
+		}
 		MSG_PRINTLN("");
 	}
 	// V: Version
@@ -559,7 +574,11 @@ void HandleCommand()
     if (hasCC1101) {
       MSG_PRINT(F("cc1101"));
       switch(cc1101::chipVersion()) {
+<<<<<<< HEAD
         case 0x08:  // CC1101_VERSION 0x31
+=======
+//      case 0x08:    // CC1101_VERSION 0x31
+>>>>>>> refs/remotes/RFD-FHEM/dev-cc1101
         case 0x18:  // CC1101_VERSION 0xF1
           MSG_PRINT(F(" 433MHz"));
           break;
@@ -607,56 +626,75 @@ void HandleCommand()
 	else if (cmdstring.charAt(0) == cmd_changeFilter) {
 	}
 	else if (cmdstring.charAt(0) == cmd_config) {
-		configCMD();
-	}
-	// get config
-	else if (cmdstring.charAt(0) == cmd_getConfig) {
-		getConfig();
-	}
-	else if (cmdstring.charAt(0) == cmd_buffer) {
-		MSG_PRINTLN(fifousage);
-#ifdef CMP_CC1101
-	} else if (cmdstring.charAt(0) == cmd_read && isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2))) {             // R<adr>  read EEPROM
-    reg = cmdstringPos2int(1);
-    MSG_PRINT(F("EEPROM "));
-    printHex2(reg);
-    if (cmdstring.charAt(3) == 'n') {
-      MSG_PRINT(F(" :"));
-      for (uint8_t i = 0; i < 16; i++) {
-        MSG_PRINT(" ");
-        printHex2(EEPROM.read(reg + i));
-      }
-    } else {
-      MSG_PRINT(F(" = "));
-      printHex2(EEPROM.read(reg));
-    }
-    MSG_PRINTLN("");
-  } else if (cmdstring.charAt(0) == cmd_patable && isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && hasCC1101) {
-    val = cmdstringPos2int(1);
-    cc1101::writeCCpatable(val);
-    MSG_PRINT(F("Write "));
-    printHex2(val);
-    MSG_PRINTLN(F(" to PATABLE done"));
-    EEPROM.commit();
-  } else if (cmdstring.charAt(0) == cmd_ccFactoryReset && hasCC1101) { 
-    cc1101::ccFactoryReset();
-    cc1101::CCinit();
-    EEPROM.commit();
-	} else if (cmdstring.charAt(0) == cmd_write) {            // write EEPROM und CC11001 register
-    if (cmdstring.charAt(1) == 'S' && cmdstring.charAt(2) == '3' && hasCC1101)  {       // WS<reg>  Command Strobes
-      cc1101::commandStrobes();
-    } else if (isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && isHexadecimalDigit(cmdstring.charAt(3)) && isHexadecimalDigit(cmdstring.charAt(4))) {
-      reg = cmdstringPos2int(1);
-      val = cmdstringPos2int(3);
-      if (hasCC1101) {
-        cc1101::writeCCreg(reg, val);
-        EEPROM.commit();
-      }
-    }
+		if (cmdstring.charAt(1) == 'G') {
+			getConfig();
+		}
+		else if (cmdstring.charAt(1) == 'E' || cmdstring.charAt(1) == 'D') {  //Todo:  E und D sind auch hexadezimal, werden hier aber abgefangen
+			configCMD();
+		}
+		else if (cmdstring.charAt(1) == 'S') {
+			configSET();
+		}
+#ifdef comp_cc1101
+		else if (isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && hasCC1101) {
+			reg = cmdstringPos2int(1);
+			cc1101::readCCreg(reg);
+		}
 #endif
-	} else {
+		else {
+			MSG_PRINTLN(F("Unsupported command"));
+		}
+	}
+#ifdef comp_cc1101
+	else if (cmdstring.charAt(0) == cmd_write) {            // write EEPROM und CC11001 register
+		if (cmdstring.charAt(1) == 'S' && cmdstring.charAt(2) == '3' && hasCC1101) {       // WS<reg>  Command Strobes
+			cc1101::commandStrobes();
+		}
+		else if (isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && isHexadecimalDigit(cmdstring.charAt(3)) && isHexadecimalDigit(cmdstring.charAt(4))) {
+			reg = cmdstringPos2int(1);
+			val = cmdstringPos2int(3);
+			EEPROM.write(reg, val);
+			if (hasCC1101) {
+				cc1101::writeCCreg(reg, val);
+			}
+		}
+		else {
+			MSG_PRINTLN(F("Unsupported command"));
+		}
+	}
+	// R<adr>  read EEPROM
+	else if (cmdstring.charAt(0) == cmd_read && isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2))) {             // R<adr>  read EEPROM
+		reg = cmdstringPos2int(1);
+		MSG_PRINT(F("EEPROM "));
+		printHex2(reg);
+		if (cmdstring.charAt(3) == 'n') {
+			MSG_PRINT(F(" :"));
+			for (uint8_t i = 0; i < 16; i++) {
+				MSG_PRINT(" ");
+				printHex2(EEPROM.read(reg + i));
+			}
+		}
+		else {
+			MSG_PRINT(F(" = "));
+			printHex2(EEPROM.read(reg));
+		}
+		MSG_PRINTLN("");
+	}
+	else if (cmdstring.charAt(0) == cmd_patable && isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && hasCC1101) {
+		val = cmdstringPos2int(1);
+		cc1101::writeCCpatable(val);
+		MSG_PRINT(F("Write "));
+		printHex2(val);
+		MSG_PRINTLN(F(" to PATABLE done"));
+	}
+	else if (cmdstring.charAt(0) == cmd_ccFactoryReset && hasCC1101) {
+		cc1101::ccFactoryReset();
+		cc1101::CCinit();
+	}
+#endif
+	else {
 		MSG_PRINT(F("Unsupported command"));
-    MSG_PRINTLN(" -> 0x" + String(cmdstring.charAt(0), HEX) + " " + cmdstring);
+		MSG_PRINTLN(" -> 0x" + String(cmdstring.charAt(0), HEX) + " " + cmdstring);
 	}
 }
 
@@ -664,17 +702,14 @@ void HandleCommand()
 void getConfig()
 {
 	MSG_PRINT(F("MS="));
-	//enDisPrint(musterDec.MSenabled);
 	MSG_PRINT(musterDec.MSenabled, DEC);
 	MSG_PRINT(F(";MU="));
-	//enDisPrint(musterDec.MUenabled);
 	MSG_PRINT(musterDec.MUenabled, DEC);
 	MSG_PRINT(F(";MC="));
-	//enDisPrint(musterDec.MCenabled);
 	MSG_PRINTLN(musterDec.MCenabled, DEC);
 }
 
-
+/*
 void enDisPrint(bool enDis)
 {
 	if (enDis) {
@@ -684,7 +719,7 @@ void enDisPrint(bool enDis)
 		MSG_PRINT(F("disable"));
 	}
 }
-
+*/
 
 void configCMD()
 {
@@ -719,6 +754,16 @@ void configCMD()
 		return;
 	}
 	storeFunctions(musterDec.MSenabled, musterDec.MUenabled, musterDec.MCenabled);
+}
+
+inline void configSET()
+{
+	//MSG_PRINT(cmdstring.substring(2, 8));
+	if (cmdstring.substring(2, 8) == "mcmbl=")    // mc min bit len
+	{
+		musterDec.mcMinBitLen = cmdstring.substring(8).toInt();
+		MSG_PRINT(musterDec.mcMinBitLen); MSG_PRINT(" bits set");
+	}
 }
 
 
@@ -813,12 +858,14 @@ void storeFunctions(const int8_t ms, int8_t mu, int8_t mc)
 	mu = mu << 1;
 	mc = mc << 2;
 	int8_t dat = ms | mu | mc;
+	yield();
 	EEPROM.write(addr_features, dat);
 }
 
 void getFunctions(bool *ms, bool *mu, bool *mc)
 {
 	int8_t dat = EEPROM.read(addr_features);
+	yield();
 	*ms = bool(dat &(1 << 0));
 	*mu = bool(dat &(1 << 1));
 	*mc = bool(dat &(1 << 2));
@@ -837,6 +884,7 @@ void dumpEEPROM() {
 
 void initEEPROM() {
 	EEPROM.begin(512); //Max bytes of eeprom to use
+	yield();
 
 	if (EEPROM.read(EE_MAGIC_OFFSET) == VERSION_1 && EEPROM.read(EE_MAGIC_OFFSET + 1) == VERSION_2) {
 		DBG_PRINTLN("Reading values fom eeprom");
@@ -860,6 +908,7 @@ void initEEPROM() {
 	getFunctions(&musterDec.MSenabled, &musterDec.MUenabled, &musterDec.MCenabled);
 }
 
+#ifdef CMP_CC1101 
 uint8_t cmdstringPos2int(uint8_t pos) {
   uint8_t val;
   uint8_t hex;
@@ -877,6 +926,8 @@ void printHex2(const byte hex) {   // Todo: printf oder scanf nutzen
   }
   MSG_PRINT(hex, HEX);
 }
+#endif
+
 
 String uptime() {
   String result = "";

@@ -19,6 +19,7 @@ install:
   - ln -s $PWD/src/_micro-api/libraries/output /usr/local/share/arduino/libraries/output
   - ln -s $PWD/src/_micro-api/libraries/signalDecoder /usr/local/share/arduino/libraries/signalDecoder
   - ln -s $PWD/src/_micro-api/libraries/SimpleFIFO /usr/local/share/arduino/libraries/simpleFIFO
+  - ln -s $PWD/src/_micro-api/libraries/fastdelegate /usr/local/share/arduino/libraries/fastdelegate
   - arduino --install-boards esp8266:esp8266
   - arduino --board esp8266:esp8266:generic --save-prefs
   - arduino --pref "compiler.warning_level=all" --save-prefs

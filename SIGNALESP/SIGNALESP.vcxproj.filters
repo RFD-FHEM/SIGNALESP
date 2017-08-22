@@ -36,6 +36,12 @@
     <ClInclude Include="..\src\_micro-api\libraries\output\src\output.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="cc1101.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\_micro-api\libraries\fastdelegate\src\FastDelegate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\_micro-api\libraries\SimpleFIFO\src\SimpleFIFO.cpp">
