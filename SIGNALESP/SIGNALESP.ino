@@ -137,13 +137,12 @@ void setup() {
 #ifdef CMP_CC1101
   cc1101::CCinit();
   hasCC1101 = cc1101::checkCC1101();
-  
   if (hasCC1101) {
       DBG_PRINTLN("CC1101 found (rev. 0" + String(cc1101::getRevision(), HEX) + ")");
       musterDec.setRSSICallback(&cc1101::getRSSI);                    // Provide the RSSI Callback
   }
-#endif
-  
+#endif  
+
   #ifdef DEBUG
     Serial.printf("\nTry connecting to WiFi with SSID '%s'\n", WiFi.SSID().c_str());
   #endif
