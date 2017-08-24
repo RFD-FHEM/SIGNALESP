@@ -632,7 +632,7 @@ void HandleCommand()
 		else if (cmdstring.charAt(1) == 'S') {
 			configSET();
 		}
-#ifdef comp_cc1101
+#ifdef CMP_CC1101
 		else if (isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && hasCC1101) {
 			reg = cmdstringPos2int(1);
 			cc1101::readCCreg(reg);
@@ -642,7 +642,7 @@ void HandleCommand()
 			MSG_PRINTLN(F("Unsupported command"));
 		}
 	}
-#ifdef comp_cc1101
+#ifdef CMP_CC1101
 	else if (cmdstring.charAt(0) == cmd_write) {            // write EEPROM und CC11001 register
 		if (cmdstring.charAt(1) == 'S' && cmdstring.charAt(2) == '3' && hasCC1101) {       // WS<reg>  Command Strobes
 			cc1101::commandStrobes();
