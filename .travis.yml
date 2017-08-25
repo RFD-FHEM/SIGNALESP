@@ -18,18 +18,19 @@ install:
 - ln -s $PWD/src/_micro-api/libraries/signalDecoder /usr/local/share/arduino/libraries/signalDecoder
 - ln -s $PWD/src/_micro-api/libraries/SimpleFIFO /usr/local/share/arduino/libraries/simpleFIFO
 - ln -s $PWD/src/_micro-api/libraries/fastdelegate /usr/local/share/arduino/libraries/fastdelegate
-- mkdir $PWD/build
+- mkdir $PWD/release
 - arduino --install-boards esp8266:esp8266
 - arduino --board esp8266:esp8266:generic --save-prefs
 - arduino --pref "compiler.warning_level=all" --save-prefs
-- arduino --pref "build.path=$PWD/build" --save-prefs
+- arduino --pref "build.path=$PWD/release" --save-prefs
 script:
 - ls -l /usr/local/share/arduino/libraries/
-- file /usr/local/share/arduino/libraries/*/*
+- 
 - echo $PWD
 - echo $HOME
 - ls $PWD
 - arduino -v --verbose-build --verify $PWD/SIGNALESP/SIGNALESP.ino 2>&1
+- file $PWD/*
 after_success:
 - bash <(curl -s https://codecov.io/bash)
 notifications:
@@ -40,7 +41,7 @@ deploy:
   provider: releases
   api_key:
     secure: moWO4Z0OP5dzsTJMxQg40BIipaFOEdVujGEXMHaLlJ0oLOd0hBatGuyJ+RffgeTTuneIUPRwVuhR9Oj51f/Kh20D93MaL1wD/TzI4LlqhG1/fiIb7hkkZ0qsXX1/zkeUHjKm/jdptw1Pwps6UMoqG/KVRseZmr3a5BoMlaE1Cgx1pa1MUSqQq771gN+0XMV71CJv5BhoxCP0GryOOYaWtK2lXaFntOHEmwLEyOG2GcYfoafKaQ5sBqcKu/RhZ/LiovhouB5on7QI4pa7UNdJJNIIr0FZVnJkfqIXmbSDRMcyj1oa9T7LV1+8BmbTnZun7OeV6ZR36sz3rS7lnox/0lwZWQkG5js+yNXZnMZ+KFVavAPQE7NFQkQEb5GQ/mdwONQoQNYV9KtoOgN+tJwUxCjohxzYh4hv2CXJdYQbbkkVeRDrm1/82fc7A0xG0MD0az96GTCOvbCvGzmhvYbxRSpFqfHtOosPjSahaoMKiksfXlvLAM2K0xakNMl1lQThQbuZyvvvHsMLItcoZcQXEiQfztnkpIPOzfUlJL+7BqoSFAe9c3+tE/7STKkvj/5Ak2mTC+6xx3Y9gYFUtB4hQnBu5S9pR246VjMw8EqWd8d+mWrAoU7LwiZibcCuBBYjQDraiGp92CJkVfAgWarzJEMW4J47l2+RlB3/Cs5Dv9A=
-  file: '$PWD/build/SIGNALESP.hex'
+  file: '$PWD/release/SIGNALESP.hex'
   on:
     repo: RFD-FHEM/SIGNALESP
     branch: dev-cc1101
