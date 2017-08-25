@@ -38,9 +38,9 @@
 #endif
 #define DEBUG 1
 
-#include "output.h"
-#include "bitstore.h"
-#include "FastDelegate.h"
+#include <output.h>
+#include <bitstore.h>
+#include <FastDelegate.h>
 
 #define maxNumPattern 8
 #define maxMsgSize 254
