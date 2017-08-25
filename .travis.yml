@@ -47,4 +47,5 @@ deploy:
   file: '$PWD/release/SIGNALESP.bin'
   on:
     repo: RFD-FHEM/SIGNALESP
+    tags: true
     branch: dev-cc1101
