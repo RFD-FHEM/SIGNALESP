@@ -247,17 +247,15 @@ void loop() {
 		if (!command_available) { cmdstring = ""; }
 		blinkLED = true;
 	}
-
-//	yield();  // crep
 	if (fifousage < FiFo.count())
 	  fifousage = FiFo.count();
   	while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
   		aktVal = FiFo.dequeue();
 	  	state = musterDec.decode(&aktVal);
 		  if (state) blinkLED = true; //LED blinken, wenn Meldung dekodiert
-//		  yield();  // crep
+      if (FiFo.count()<120) yield();
 	}
-
+  
 #ifdef _DEBUG_DEV_SERIAL
   if (Serial.available()) {
     unsigned char c = Serial.read();
@@ -856,14 +854,12 @@ void storeFunctions(const int8_t ms, int8_t mu, int8_t mc)
 	mu = mu << 1;
 	mc = mc << 2;
 	int8_t dat = ms | mu | mc;
-	yield();
 	EEPROM.write(addr_features, dat);
 }
 
 void getFunctions(bool *ms, bool *mu, bool *mc)
 {
 	int8_t dat = EEPROM.read(addr_features);
-	yield();
 	*ms = bool(dat &(1 << 0));
 	*mu = bool(dat &(1 << 1));
 	*mc = bool(dat &(1 << 2));
@@ -882,7 +878,6 @@ void dumpEEPROM() {
 
 void initEEPROM() {
 	EEPROM.begin(512); //Max bytes of eeprom to use
-	yield();
 
 	if (EEPROM.read(EE_MAGIC_OFFSET) == VERSION_1 && EEPROM.read(EE_MAGIC_OFFSET + 1) == VERSION_2) {
 		DBG_PRINTLN("Reading values fom eeprom");

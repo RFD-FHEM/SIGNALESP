@@ -38,6 +38,8 @@
 #endif
 #define DEBUG 1
 
+#define ETHERNET_PRINT  // Quick hack to enable ethernet output in signalDecoder Lib
+
 #include <output.h>
 #include <bitstore.h>
 #include <FastDelegate.h>

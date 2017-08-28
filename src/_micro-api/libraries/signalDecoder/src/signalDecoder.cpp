@@ -97,7 +97,6 @@ inline void SignalDetectorClass::doDetect()
 									//if (messageLen == 0) valid = true;
 	if (!valid) {
 		// Try output
-//		yield();
 		processMessage();
 		if (messageLen < minMessageLen) {
 			MsMoveCount = 3;
@@ -185,7 +184,6 @@ void SignalDetectorClass::compress_pattern()
 	{
 		if (histo[idx] == 0)
 			continue;
-		yield();
 		for (uint8_t idx2 = idx + 1; idx2<patternLen; idx2++)
 		{
 			if (histo[idx2] == 0 || (pattern[idx] ^ pattern[idx2]) >> 15)
@@ -327,6 +325,7 @@ void SignalDetectorClass::processMessage()
 						MSG_WRITE(patternLow);
 						MSG_WRITE(highByte(patternInt) | B10000000);
 						MSG_PRINT(SERIAL_DELIMITER);
+						yield();
 					}
 
 					uint8_t n;
@@ -339,7 +338,7 @@ void SignalDetectorClass::processMessage()
 					}
 					if ((mstart & 1) == 1) {  // ungerade
 						mstart--;
-						(message.getByte(mstart / 2, &n) & 15) | 128;    // high nibble = 8 als Kennzeichen für ungeraden mstart
+						(message.getByte(mstart / 2, &n) & 15) | 128;    // high nibble = 8 als Kennzeichen fÃ¼r ungeraden mstart
 						MSG_WRITE(n);
 						mstart += 2;
 					}
@@ -366,6 +365,8 @@ void SignalDetectorClass::processMessage()
 					{
 						MSG_PRINT(message[i]);
 					}
+
+					yield();
 					MSG_PRINT(SERIAL_DELIMITER);
 					MSG_PRINT("CP="); MSG_PRINT(clock);     MSG_PRINT(SERIAL_DELIMITER);     // ClockPulse
 					MSG_PRINT("SP="); MSG_PRINT(sync);      MSG_PRINT(SERIAL_DELIMITER);     // SyncPulse
@@ -390,25 +391,6 @@ void SignalDetectorClass::processMessage()
 				MSG_PRINT("\n");
 
 				success = true;
-#ifdef mp_crc
-				const int8_t crco = printMsgRaw(mstart, mend, &preamble, &postamble);
-
-				if ((mend < messageLen - minMessageLen) && (message[mend + 1] == message[mend - mstart + mend + 1])) {
-					mstart = mend + 1;
-					byte crcs = 0x00;
-#ifndef ARDUSIM
-					for (uint8_t i = mstart + 1; i <= mend - mstart + mend; i++)
-					{
-						crcs = _crc_ibutton_update(crcs, message[i]);
-					}
-#endif
-					if (crcs == crco)
-					{
-						// repeat found
-					}
-					//processMessage(); // Todo: needs to be optimized
-				}
-#endif
 
 
 			}
@@ -629,7 +611,7 @@ void SignalDetectorClass::processMessage()
 #endif
 		}
 	}
-	if (!m_truncated)  // Todo: Eventuell auf vollen Puffer prüfen
+	if (!m_truncated)  // Todo: Eventuell auf vollen Puffer prÃ¼fen
 	{
 		reset();
 	}
@@ -751,7 +733,6 @@ void SignalDetectorClass::calcHisto(const uint8_t startpos, uint8_t endpos)
 	{
 		histo[i] = 0;
 	}
-//	yield();
 
 	if (endpos == 0) endpos = messageLen;
 	/*for (uint8_t i = startpos; i < endpos; i++)
@@ -762,7 +743,6 @@ void SignalDetectorClass::calcHisto(const uint8_t startpos, uint8_t endpos)
 	uint8_t bval;
 	for (uint8_t i = bstartpos; i<bendpos; ++i)
 	{
-//		yield();
 		message.getByte(i, &bval);
 		histo[bval >> 4]++;
 		histo[bval & B00001111]++;
@@ -813,7 +793,7 @@ bool SignalDetectorClass::getClock()
 
 bool SignalDetectorClass::getSync()
 {
-	// Durchsuchen aller Musterpulse und prueft ob darin ein Sync Faktor enthalten ist. Anschließend wird verifiziert ob dieser Syncpuls auch im Signal nacheinander uebertragen wurde
+	// Durchsuchen aller Musterpulse und prueft ob darin ein Sync Faktor enthalten ist. AnschlieÃŸend wird verifiziert ob dieser Syncpuls auch im Signal nacheinander uebertragen wurde
 	//
 #if DEBUGDETECT > 3
 	DBG_PRINTLN("  --  Searching Sync  -- ");
@@ -821,7 +801,6 @@ bool SignalDetectorClass::getSync()
 
 	if (state == clockfound)		// we need a clock to find this type of sync
 	{
-//		yield();
 		// clock wurde bereits durch getclock bestimmt.
 		for (int8_t p = patternLen - 1; p >= 0; --p)  // Schleife fuer langen Syncpuls
 		{
@@ -888,35 +867,30 @@ bool SignalDetectorClass::getSync()
 	return false;
 }
 
+/*
 void SignalDetectorClass::printMsgStr(const String * first, const String * second, const String * third)
 {
 	MSG_PRINT(*first);
 	MSG_PRINT(*second);
 	MSG_PRINT(*third);
-
 }
-
+*/
+/*
 int8_t SignalDetectorClass::printMsgRaw(uint8_t m_start, const uint8_t m_end, const String * preamble, const String * postamble)
 {
 	MSG_PRINT(*preamble);
 	//String msg;
 	//msg.reserve(m_end-mstart);
-	byte crcv = 0x00;
 	for (; m_start <= m_end; m_start++)
 	{
 		//msg + =message[m_start];
 		//MSG_PRINT((100*message[m_start])+(10*message[m_start])+message[m_start]);
 		MSG_PRINT(message[m_start]);
-#ifndef ARDUSIM
-		//crcv = _crc_ibutton_update(crcv, message[m_start]);
-#endif
 	}
-	//MSG_PRINT(msg);
 	MSG_PRINT(*postamble);
-	return crcv;
-	//printMsgStr(preamble,&msg,postamble);}
+	yield();
 }
-
+*/
 
 
 
@@ -1056,6 +1030,7 @@ void ManchesterpatternDecoder::printMessageHexStr()
 		sprintf(hexStr, "%01X", getMCByte(idx) & 0xF);
 		MSG_PRINT(hexStr);
 	}
+	yield();
 }
 
 
@@ -1085,6 +1060,7 @@ void ManchesterpatternDecoder::printMessagePulseStr()
 	MSG_PRINT("LH="); MSG_PRINT(pdec->pattern[longhigh]); MSG_PRINT(SERIAL_DELIMITER);
 	MSG_PRINT("SL="); MSG_PRINT(pdec->pattern[shortlow]); MSG_PRINT(SERIAL_DELIMITER);
 	MSG_PRINT("SH="); MSG_PRINT(pdec->pattern[shorthigh]); MSG_PRINT(SERIAL_DELIMITER);
+	yield();
 }
 
 /** @brief (one liner)
@@ -1297,7 +1273,7 @@ const bool ManchesterpatternDecoder::doDecode() {
 
 #endif
 					//pdec->printOut();
-					pdec->bufferMove(i);   // Todo: BufferMove könnte in die Serielle Ausgabe verschoben werden, das würde ein paar Mikrosekunden Zeit sparen
+					pdec->bufferMove(i);   // Todo: BufferMove kÃ¶nnte in die Serielle Ausgabe verschoben werden, das wÃ¼rde ein paar Mikrosekunden Zeit sparen
 										   //pdec->m_truncated = true;  // Flag that we truncated the message array and want to receiver some more data
 					mc_start_found = false;  // This will break serval unit tests. Normaly setting this to false shoud be done by reset, needs to be checked if reset shoud be called after hex string is printed out
 
@@ -1450,7 +1426,6 @@ const bool ManchesterpatternDecoder::isManchester()
 
 	for (uint8_t i = 0; i<p; i++)
 	{
-		yield();
 		if (pdec->pattern[sortedPattern[i]] <= 0) continue;
 #if DEBUGDETECT >= 2
 		DBG_PRINT("CLK="); DBG_PRINT(sortedPattern[i]); DBG_PRINT(":");
