@@ -35,6 +35,7 @@ after_success:
 #- bash <(curl -s https://codecov.io/bash)
 - file $PWD/release/*
 - mv $PWD/release/SIGNALESP.ino.bin $PWD/release/SIGNALESP.bin
+- echo $TRAVIS_TAG
 notifications:
   email:
     on_success: change
