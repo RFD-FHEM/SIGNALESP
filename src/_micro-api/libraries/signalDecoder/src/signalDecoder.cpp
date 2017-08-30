@@ -325,7 +325,6 @@ void SignalDetectorClass::processMessage()
 						MSG_WRITE(patternLow);
 						MSG_WRITE(highByte(patternInt) | B10000000);
 						MSG_PRINT(SERIAL_DELIMITER);
-						yield();
 					}
 
 					uint8_t n;
@@ -366,7 +365,6 @@ void SignalDetectorClass::processMessage()
 						MSG_PRINT(message[i]);
 					}
 
-					yield();
 					MSG_PRINT(SERIAL_DELIMITER);
 					MSG_PRINT("CP="); MSG_PRINT(clock);     MSG_PRINT(SERIAL_DELIMITER);     // ClockPulse
 					MSG_PRINT("SP="); MSG_PRINT(sync);      MSG_PRINT(SERIAL_DELIMITER);     // SyncPulse
@@ -389,6 +387,7 @@ void SignalDetectorClass::processMessage()
 
 				MSG_PRINT(MSG_END);
 				MSG_PRINT("\n");
+				yield();
 
 				success = true;
 
@@ -482,7 +481,7 @@ void SignalDetectorClass::processMessage()
 						MSG_PRINT("O");
 						MSG_PRINT(SERIAL_DELIMITER);
 					}
-					MSG_PRINTLN(MSG_END);
+					MSG_PRINTLN(MSG_END); yield();
 #endif
 					MSG_PRINT(MSG_START);
 					MSG_PRINT("MC");
@@ -498,6 +497,7 @@ void SignalDetectorClass::processMessage()
 					MSG_PRINT("R=");  MSG_PRINT(rssiValue); MSG_PRINT(SERIAL_DELIMITER);     // Signal Level (RSSI)
 					MSG_PRINT(MSG_END);
 					MSG_PRINT("\n");
+					yield();
 
 #ifdef DEBUGDECODE
 					DBG_PRINTLN("");
@@ -596,7 +596,7 @@ void SignalDetectorClass::processMessage()
 				if (m_overflow) {
 					MSG_PRINT("O");  MSG_PRINT(SERIAL_DELIMITER);
 				}
-				MSG_PRINT(MSG_END);  MSG_PRINT("\n");
+				MSG_PRINT(MSG_END);  MSG_PRINT("\n"); yield();
 
 				m_truncated = false;
 				success = true;
@@ -1030,7 +1030,7 @@ void ManchesterpatternDecoder::printMessageHexStr()
 		sprintf(hexStr, "%01X", getMCByte(idx) & 0xF);
 		MSG_PRINT(hexStr);
 	}
-	yield();
+//	yield();
 }
 
 
@@ -1060,7 +1060,7 @@ void ManchesterpatternDecoder::printMessagePulseStr()
 	MSG_PRINT("LH="); MSG_PRINT(pdec->pattern[longhigh]); MSG_PRINT(SERIAL_DELIMITER);
 	MSG_PRINT("SL="); MSG_PRINT(pdec->pattern[shortlow]); MSG_PRINT(SERIAL_DELIMITER);
 	MSG_PRINT("SH="); MSG_PRINT(pdec->pattern[shorthigh]); MSG_PRINT(SERIAL_DELIMITER);
-	yield();
+//	yield();
 }
 
 /** @brief (one liner)
@@ -1319,7 +1319,6 @@ const bool ManchesterpatternDecoder::doDecode() {
 		}
 		//MSG_PRINT(" S MC ");
 		i++;
-		yield();
 	}
 	pdec->mend = i - (ht ? 0 : 1); // keep short in buffer;
 

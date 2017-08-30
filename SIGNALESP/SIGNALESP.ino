@@ -19,6 +19,7 @@
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
 #define _DEBUG_DEV_SERIAL
+#define _CC1101_DEBUG_CONFIG
 
 
 #define ETHERNET_PRINT
@@ -247,13 +248,14 @@ void loop() {
 		if (!command_available) { cmdstring = ""; }
 		blinkLED = true;
 	}
+	
 	if (fifousage < FiFo.count())
 	  fifousage = FiFo.count();
-  	while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
+  while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
   		aktVal = FiFo.dequeue();
 	  	state = musterDec.decode(&aktVal);
 		  if (state) blinkLED = true; //LED blinken, wenn Meldung dekodiert
-      if (FiFo.count()<120) yield();
+//      if (FiFo.count()<120) yield();
 	}
   
 #ifdef _DEBUG_DEV_SERIAL
@@ -265,6 +267,9 @@ void loop() {
       case 'c':
         Serial.println("marc: 0x" + String(cc1101::currentMode(), HEX));
         Serial.println("fifo: " + String(FiFo.count()) + ", max. " + String(fifousage));
+#ifdef _CC1101_DEBUG_CONFIG
+        cc1101::dumpConfigRegister();
+#endif
         break;
       case 'd':
         dumpEEPROM();
@@ -648,7 +653,8 @@ void HandleCommand()
 		else if (isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && isHexadecimalDigit(cmdstring.charAt(3)) && isHexadecimalDigit(cmdstring.charAt(4))) {
 			reg = cmdstringPos2int(1);
 			val = cmdstringPos2int(3);
-			EEPROM.write(reg, val);
+			EEPROM.write(reg+1, val); // scheinbar hat sich hier etwas um 1 Byte verschoben
+			EEPROM.commit();
 			if (hasCC1101) {
 				cc1101::writeCCreg(reg, val);
 			}
@@ -684,6 +690,7 @@ void HandleCommand()
 	}
 	else if (cmdstring.charAt(0) == cmd_ccFactoryReset && hasCC1101) {
 		cc1101::ccFactoryReset();
+		EEPROM.commit();
 		cc1101::CCinit();
 	}
 #endif
