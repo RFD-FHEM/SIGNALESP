@@ -105,7 +105,8 @@ inline void SignalDetectorClass::doDetect()
 	}
 	else if (messageLen == minMessageLen) {
 		state = detecting;  // Set state to detecting, because we have more than minMessageLen data gathered, so this is no noise
-		rssiValue = _rssiCallback();
+		if (_rssiCallback != NULL)	// don't call uninitialized function pointer
+			rssiValue = _rssiCallback();
 	}
 
 	int8_t fidx = findpatt(*first);
@@ -338,7 +339,7 @@ void SignalDetectorClass::processMessage()
 					}
 					if ((mstart & 1) == 1) {  // ungerade
 						mstart--;
-						(message.getByte(mstart / 2, &n) & 15) | 128;    // high nibble = 8 als Kennzeichen für ungeraden mstart
+						(message.getByte(mstart / 2, &n) & 15) | 128;    // high nibble = 8 als Kennzeichen fÃ¼r ungeraden mstart
 						MSG_WRITE(n);
 						mstart += 2;
 					}
@@ -610,7 +611,7 @@ void SignalDetectorClass::processMessage()
 #endif
 		}
 	}
-	if (!m_truncated)  // Todo: Eventuell auf vollen Puffer prüfen
+	if (!m_truncated)  // Todo: Eventuell auf vollen Puffer prÃ¼fen
 	{
 		reset();
 	}
@@ -792,7 +793,7 @@ bool SignalDetectorClass::getClock()
 
 bool SignalDetectorClass::getSync()
 {
-	// Durchsuchen aller Musterpulse und prueft ob darin ein Sync Faktor enthalten ist. Anschließend wird verifiziert ob dieser Syncpuls auch im Signal nacheinander uebertragen wurde
+	// Durchsuchen aller Musterpulse und prueft ob darin ein Sync Faktor enthalten ist. AnschlieÃŸend wird verifiziert ob dieser Syncpuls auch im Signal nacheinander uebertragen wurde
 	//
 #if DEBUGDETECT > 3
 	DBG_PRINTLN("  --  Searching Sync  -- ");
@@ -1270,7 +1271,7 @@ const bool ManchesterpatternDecoder::doDecode() {
 
 #endif
 					//pdec->printOut();
-					pdec->bufferMove(i);   // Todo: BufferMove könnte in die Serielle Ausgabe verschoben werden, das würde ein paar Mikrosekunden Zeit sparen
+					pdec->bufferMove(i);   // Todo: BufferMove kÃ¶nnte in die Serielle Ausgabe verschoben werden, das wÃ¼rde ein paar Mikrosekunden Zeit sparen
 										   //pdec->m_truncated = true;  // Flag that we truncated the message array and want to receiver some more data
 					mc_start_found = false;  // This will break serval unit tests. Normaly setting this to false shoud be done by reset, needs to be checked if reset shoud be called after hex string is printed out
 
@@ -1316,7 +1317,6 @@ const bool ManchesterpatternDecoder::doDecode() {
 		}
 		//MSG_PRINT(" S MC ");
 		i++;
-		yield();
 	}
 	pdec->mend = i - (ht ? 0 : 1); // keep short in buffer;
 

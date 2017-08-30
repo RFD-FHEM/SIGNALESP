@@ -18,6 +18,7 @@
 #define BAUDRATE               115200
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
+#define _CC1101_DEBUG_CONFIG
 
 
 #define ETHERNET_PRINT
@@ -137,7 +138,7 @@ void setup() {
   cc1101::CCinit();
   hasCC1101 = cc1101::checkCC1101();
   if (hasCC1101) {
-      DBG_PRINTLN("CC1101 found");
+      DBG_PRINTLN("CC1101 found (rev. 0" + String(cc1101::getRevision(), HEX) + ")");
       musterDec.setRSSICallback(&cc1101::getRSSI);                    // Provide the RSSI Callback
   } else 
 #endif
@@ -247,6 +248,7 @@ void loop() {
 		if (!command_available) { cmdstring = ""; }
 		blinkLED = true;
 	}
+	
 	if (fifousage < FiFo.count())
 	  fifousage = FiFo.count();
 
@@ -552,13 +554,16 @@ void HandleCommand()
     if (hasCC1101) {
       MSG_PRINT(F("cc1101"));
       switch(cc1101::chipVersion()) {
-//      case 0x08:    // CC1101_VERSION 0x31
+        case 0x08:  // CC1101_VERSION 0x31
         case 0x18:  // CC1101_VERSION 0xF1
           MSG_PRINT(F(" 433MHz"));
           break;
         case 0x04:  // CC1101_VERSION 0x31
         case 0x14:  // CC1101_VERSION 0xF1
           MSG_PRINT(F(" 868MHz"));
+          break;
+        default:
+          MSG_PRINT(" chip unknown 0x" + String(cc1101::chipVersion(), HEX));
           break;
       }
     }
@@ -624,7 +629,8 @@ void HandleCommand()
 		else if (isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && isHexadecimalDigit(cmdstring.charAt(3)) && isHexadecimalDigit(cmdstring.charAt(4))) {
 			reg = cmdstringPos2int(1);
 			val = cmdstringPos2int(3);
-			EEPROM.write(reg, val);
+			EEPROM.write(reg+1, val); // scheinbar hat sich hier etwas um 1 Byte verschoben
+			EEPROM.commit();
 			if (hasCC1101) {
 				cc1101::writeCCreg(reg, val);
 			}
@@ -660,6 +666,7 @@ void HandleCommand()
 	}
 	else if (cmdstring.charAt(0) == cmd_ccFactoryReset && hasCC1101) {
 		cc1101::ccFactoryReset();
+		EEPROM.commit();
 		cc1101::CCinit();
 	}
 #endif
@@ -745,7 +752,8 @@ inline void ethernetEvent()
 		if (!serverClient || !serverClient.connected()) {
 			if (serverClient) serverClient.stop();
 			serverClient = Server.available();
-			DBG_PRINTLN("New client: ");
+			DBG_PRINT("New client: ");
+			DBG_PRINTLN(serverClient.remoteIP());
 			return;
 		}
 		//no free/disconnected spot so reject
