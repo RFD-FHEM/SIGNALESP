@@ -540,7 +540,7 @@ namespace cc1101 {
 #ifdef _CC1101_DEBUG_CONFIG
   void dumpConfigRegister() {
     Serial.printf("\ndump config register:\n");
-    for (byte i=0; i<0x28; i++) {
+    for (byte i=0; i<sizeof(initVal); i++) {
       Serial.printf("%02X ", readReg(i, CC1101_CONFIG));
       if (i % 16 == 15)
         Serial.printf("\n");

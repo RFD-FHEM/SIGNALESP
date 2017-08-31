@@ -19,7 +19,7 @@
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
 #define _DEBUG_DEV_SERIAL
-#define _CC1101_DEBUG_CONFIG
+//#define _CC1101_DEBUG_CONFIG
 
 
 #define ETHERNET_PRINT
@@ -120,7 +120,7 @@ void setup() {
 	//ESP.wdtEnable(2000);
 
   Serial.begin(115200);
-  Serial.setDebugOutput(true);
+//  Serial.setDebugOutput(true);
   while (!Serial)
     delay(90);
 
@@ -185,7 +185,7 @@ void setup() {
   }
 
   WiFiManager wifiManager;
-  wifiManager.setBreakAfterConfig(true);
+//  wifiManager.setBreakAfterConfig(true);
   //reset settings - for testing
   //wifiManager.resetSettings();
 
