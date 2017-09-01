@@ -326,7 +326,6 @@ void SignalDetectorClass::processMessage()
 						MSG_WRITE(patternLow);
 						MSG_WRITE(highByte(patternInt) | B10000000);
 						MSG_PRINT(SERIAL_DELIMITER);
-						yield();
 					}
 
 					uint8_t n;
@@ -367,7 +366,6 @@ void SignalDetectorClass::processMessage()
 						MSG_PRINT(message[i]);
 					}
 
-					yield();
 					MSG_PRINT(SERIAL_DELIMITER);
 					MSG_PRINT("CP="); MSG_PRINT(clock);     MSG_PRINT(SERIAL_DELIMITER);     // ClockPulse
 					MSG_PRINT("SP="); MSG_PRINT(sync);      MSG_PRINT(SERIAL_DELIMITER);     // SyncPulse
@@ -1031,7 +1029,6 @@ void ManchesterpatternDecoder::printMessageHexStr()
 		sprintf(hexStr, "%01X", getMCByte(idx) & 0xF);
 		MSG_PRINT(hexStr);
 	}
-	yield();
 }
 
 
@@ -1061,7 +1058,6 @@ void ManchesterpatternDecoder::printMessagePulseStr()
 	MSG_PRINT("LH="); MSG_PRINT(pdec->pattern[longhigh]); MSG_PRINT(SERIAL_DELIMITER);
 	MSG_PRINT("SL="); MSG_PRINT(pdec->pattern[shortlow]); MSG_PRINT(SERIAL_DELIMITER);
 	MSG_PRINT("SH="); MSG_PRINT(pdec->pattern[shorthigh]); MSG_PRINT(SERIAL_DELIMITER);
-	yield();
 }
 
 /** @brief (one liner)
