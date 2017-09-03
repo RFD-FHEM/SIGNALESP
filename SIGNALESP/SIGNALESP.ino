@@ -18,7 +18,10 @@
 #define BAUDRATE               115200
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
-#define _CC1101_DEBUG_CONFIG
+
+
+
+
 
 
 #define ETHERNET_PRINT
@@ -140,9 +143,8 @@ void setup() {
   if (hasCC1101) {
       DBG_PRINTLN("CC1101 found (rev. 0" + String(cc1101::getRevision(), HEX) + ")");
       musterDec.setRSSICallback(&cc1101::getRSSI);                    // Provide the RSSI Callback
-  } else 
-#endif
-      musterDec.setRSSICallback(&rssiCallback); // Provide the RSSI Callback    
+  }
+#endif  
 
   #ifdef DEBUG
     Serial.printf("\nTry connecting to WiFi with SSID '%s'\n", WiFi.SSID().c_str());
@@ -214,12 +216,12 @@ void setup() {
 	os_timer_setfn(&cronTimer, cronjob, NULL);
 	os_timer_arm(&cronTimer, 31, true);
 
-#ifdef comp_cc1101
+#ifdef CMP_CC1101
 	if (!hasCC1101 || cc1101::regCheck()) {
 #endif
 	enableReceive();
     DBG_PRINTLN(F("receiver enabled"));
-#ifdef comp_cc1101
+#ifdef CMP_CC1101
   } else {
     DBG_PRINTLN(F("cc1101 is not correctly set. Please do a factory reset via command e"));
   }
@@ -760,7 +762,7 @@ inline void ethernetEvent()
 //		WiFiClient newClient = Server.available();
 //		newClient.stop();
 	}
-	yield();
+//	yield();
 }
 
 void serialEvent()
