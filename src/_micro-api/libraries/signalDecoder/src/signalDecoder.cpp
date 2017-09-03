@@ -387,7 +387,6 @@ void SignalDetectorClass::processMessage()
 
 				MSG_PRINT(MSG_END);
 				MSG_PRINT("\n");
-				yield();
 
 				success = true;
 
@@ -481,7 +480,7 @@ void SignalDetectorClass::processMessage()
 						MSG_PRINT("O");
 						MSG_PRINT(SERIAL_DELIMITER);
 					}
-					MSG_PRINTLN(MSG_END); yield();
+					MSG_PRINTLN(MSG_END);
 #endif
 					MSG_PRINT(MSG_START);
 					MSG_PRINT("MC");
@@ -497,7 +496,6 @@ void SignalDetectorClass::processMessage()
 					MSG_PRINT("R=");  MSG_PRINT(rssiValue); MSG_PRINT(SERIAL_DELIMITER);     // Signal Level (RSSI)
 					MSG_PRINT(MSG_END);
 					MSG_PRINT("\n");
-					yield();
 
 #ifdef DEBUGDECODE
 					DBG_PRINTLN("");
@@ -596,7 +594,7 @@ void SignalDetectorClass::processMessage()
 				if (m_overflow) {
 					MSG_PRINT("O");  MSG_PRINT(SERIAL_DELIMITER);
 				}
-				MSG_PRINT(MSG_END);  MSG_PRINT("\n"); yield();
+				MSG_PRINT(MSG_END);  MSG_PRINT("\n");
 
 				m_truncated = false;
 				success = true;

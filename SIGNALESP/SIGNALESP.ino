@@ -19,7 +19,11 @@
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
 #define _DEBUG_DEV_SERIAL
-//#define _CC1101_DEBUG_CONFIG
+
+#ifdef _DEBUG_DEV_SERIAL
+//  #define _DEBUG_DEV_SERIAL_SEND_DELAYED
+//  #define _CC1101_DEBUG_CONFIG
+#endif
 
 
 #define ETHERNET_PRINT
@@ -275,7 +279,17 @@ void loop() {
         dumpEEPROM();
         break;
       case 's':
+#ifndef _DEBUG_DEV_SERIAL_SEND_DELAYED
         MSG_PRINTLN("Test Test Test");
+#else
+        ESP.wdtDisable();
+        MSG_PRINT("Test Test ");
+        delayMicroseconds(1000*1000);
+        MSG_PRINTLN("1s delay Test");
+        delayMicroseconds(2000*1000);
+        MSG_PRINTLN("2s delay without yield()");
+        ESP.wdtEnable(1000);
+#endif  // _DEBUG_DEV_SERIAL_SEND_DELAYED
         break;
       case 'u':
         Serial.println("uptime: " + uptime());
