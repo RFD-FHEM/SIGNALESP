@@ -163,8 +163,6 @@ inline void SignalDetectorClass::doDetect()
 	DBG_PRINT(", vcnt:");	DBG_PRINT(message.valcount);
 	DBG_PRINTLN(" ");
 #endif
-
-
 }
 
 bool SignalDetectorClass::decode(const int * pulse)
@@ -229,7 +227,7 @@ void SignalDetectorClass::compress_pattern()
 
 void SignalDetectorClass::processMessage()
 {
-	yield();
+//	yield();
 
 	if (mcDetected == true || messageLen >= minMessageLen) {
 		success = false;

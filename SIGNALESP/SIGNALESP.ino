@@ -18,6 +18,12 @@
 #define BAUDRATE               115200
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
+#define _DEBUG_DEV_SERIAL
+
+#ifdef _DEBUG_DEV_SERIAL
+//  #define _DEBUG_DEV_SERIAL_SEND_DELAYED
+//  #define _CC1101_DEBUG_CONFIG
+#endif
 
 
 
@@ -40,7 +46,7 @@ WiFiClient serverClient;
 
 SimpleFIFO<int, FIFO_LENGTH> FiFo; //store FIFO_LENGTH # ints
 #include <signalDecoder.h>
-#include <FastDelegate.h> 
+#include <FastDelegate.h> // prevent travis errors
 SignalDetectorClass musterDec;
 
 
@@ -122,7 +128,7 @@ void setup() {
 	//ESP.wdtEnable(2000);
 
   Serial.begin(115200);
-  Serial.setDebugOutput(true);
+//  Serial.setDebugOutput(true);
   while (!Serial)
     delay(90);
 
@@ -191,7 +197,7 @@ void setup() {
   }
 
   WiFiManager wifiManager;
-  wifiManager.setBreakAfterConfig(true);
+//  wifiManager.setBreakAfterConfig(true);
   //reset settings - for testing
   //wifiManager.resetSettings();
 
@@ -257,14 +263,48 @@ void loop() {
 	
 	if (fifousage < FiFo.count())
 	  fifousage = FiFo.count();
-
-	while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
-		aktVal = FiFo.dequeue();
-		state = musterDec.decode(&aktVal);
-		if (state) blinkLED = true; //LED blinken, wenn Meldung dekodiert
-		if (FiFo.count()<120) yield();
+  while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
+  		aktVal = FiFo.dequeue();
+	  	state = musterDec.decode(&aktVal);
+		  if (state) blinkLED = true; //LED blinken, wenn Meldung dekodiert
+//      if (FiFo.count()<120) yield();
 	}
-
+  
+#ifdef _DEBUG_DEV_SERIAL
+  if (Serial.available()) {
+    unsigned char c = Serial.read();
+//    if (c != char(10))
+//      Serial.println(".");
+    switch(c) {
+      case 'c':
+        Serial.println("marc: 0x" + String(cc1101::currentMode(), HEX));
+        Serial.println("fifo: " + String(FiFo.count()) + ", max. " + String(fifousage));
+#ifdef _CC1101_DEBUG_CONFIG
+        cc1101::dumpConfigRegister();
+#endif
+        break;
+      case 'd':
+        dumpEEPROM();
+        break;
+      case 's':
+#ifndef _DEBUG_DEV_SERIAL_SEND_DELAYED
+        MSG_PRINTLN("Test Test Test");
+#else
+        ESP.wdtDisable();
+        MSG_PRINT("Test Test ");
+        delayMicroseconds(1000*1000);
+        MSG_PRINTLN("1s delay Test");
+        delayMicroseconds(2000*1000);
+        MSG_PRINTLN("2s delay without yield()");
+        ESP.wdtEnable(1000);
+#endif  // _DEBUG_DEV_SERIAL_SEND_DELAYED
+        break;
+      case 'u':
+        Serial.println("uptime: " + uptime());
+        break;
+    }
+  }
+#endif	// _DEBUG_DEV_SERIAL
 }
 
 

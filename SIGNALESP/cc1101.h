@@ -20,17 +20,15 @@ extern String cmdstring;
 
 
 namespace cc1101 {
-#if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101) 
-  #ifndef ESP8266
-		#define SS					  8  
-  #endif
+#if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101)
+	#define SS					  8  
 	#define PIN_MARK433			  4  // LOW -> 433Mhz | HIGH -> 868Mhz
 #endif
 
-	#define csPin	15   // CSN  out
-	#define mosiPin 13   // MOSI out
-	#define misoPin 12   // MISO in
-	#define sckPin  14   // SCLK out	
+	#define csPin	SS	   // CSN  out
+	#define mosiPin MOSI   // MOSI out
+	#define misoPin MISO   // MISO in
+	#define sckPin  SCK    // SCLK out	
 
 
 	
@@ -54,7 +52,8 @@ namespace cc1101 {
   #define CC1101_PARTNUM_REV01      0xF0 // Chip ID
   #define CC1101_VERSION_REV01      0xF1 // Chip ID
   #define CC1100_RSSI_REV01         0xF4 // Received signal strength indication
-  #define CC1100_MARCSTATE_REV01    0xF5 // Control state machine state
+	#define CC1100_MARCSTATE_REV01    0xF5 // Control state machine state
+
   // Status registers - older version base on 0x30
   #define CC1101_PARTNUM_REV00      0x30 // Chip ID
   #define CC1101_VERSION_REV00      0x31 // Chip ID
@@ -195,8 +194,11 @@ namespace cc1101 {
 		0x00, // 28 RCCTRL0
 	};
   
-
- 
+// prototypes
+#ifdef _CC1101_DEBUG_CONFIG
+  void dumpConfigRegister();
+#endif
+  
 	byte hex2int(byte hex) {    // convert a hexdigit to int    // Todo: printf oder scanf nutzen
 		if (hex >= '0' && hex <= '9') hex = hex - '0';
 		else if (hex >= 'a' && hex <= 'f') hex = hex - 'a' + 10;
@@ -395,7 +397,7 @@ namespace cc1101 {
 				EEPROM.write(EE_CC1100_PA + i, 0);
 			}
 		}
-        EEPROM.commit();
+    EEPROM.commit();
 		MSG_PRINTLN("ccFactoryReset done");  
 	}
 
@@ -417,7 +419,7 @@ namespace cc1101 {
   
 	bool checkCC1101() {
 
-		uint8_t version = chipVersion();  // Version
+    uint8_t version = chipVersion();  // Version
 		uint8_t partnum = readReg((revision == 0x01 ? CC1101_PARTNUM_REV01 : CC1101_PARTNUM_REV00), CC1101_READ_SINGLE);  // Partnum
 		DBG_PRINT("CCVersion=");	DBG_PRINTLN("0x" + String(version, HEX));
 		DBG_PRINT("CCPartnum=");	DBG_PRINTLN("0x" + String(partnum, HEX));
@@ -444,7 +446,7 @@ namespace cc1101 {
 		pinAsOutput(csPin);                    // set pins for SPI communication
 		
 		#ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
-		pinAsInputPullUp(PIN_MARK433);
+		  pinAsInputPullUp(PIN_MARK433);
 		#endif
 		//// �nderungsbeginn  ---> 
 
@@ -463,7 +465,7 @@ namespace cc1101 {
 		pinAsOutput(PIN_SEND);      // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
 	}
 
-	uint8_t getRevision() { return revision; }
+  uint8_t getRevision() { return revision; }
 	uint8_t getRSSI()
 	{
 		return readReg((revision == 0x01 ? CC1100_RSSI_REV01 : CC1100_RSSI_REV00), CC1101_STATUS);// Pruefen ob Umwandung von uint to int den richtigen Wert zurueck gibt
@@ -517,8 +519,11 @@ namespace cc1101 {
 		DBG_PRINTLN("POR Done");
 		delay(10);
 
+#ifdef _CC1101_DEBUG_CONFIG
+    dumpConfigRegister();
+#endif
 
-		cc1101_Select();
+    cc1101_Select();
 		
 		sendSPI(CC1100_WRITE_BURST);
 		for (uint8_t i = 0; i<sizeof(initVal); i++) {              // write EEPROM value to cc11001
@@ -533,8 +538,18 @@ namespace cc1101 {
 		setReceiveMode();
 	}
 
-
- 
+#ifdef _CC1101_DEBUG_CONFIG
+  void dumpConfigRegister() {
+    Serial.printf("\ndump config register:\n");
+    for (byte i=0; i<sizeof(initVal); i++) {
+      Serial.printf("%02X ", readReg(i, CC1101_CONFIG));
+      if (i % 16 == 15)
+        Serial.printf("\n");
+    }
+    Serial.printf("\n");
+  }
+#endif
+  
 	bool regCheck()
 	{
 		
