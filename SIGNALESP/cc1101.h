@@ -194,7 +194,7 @@ namespace cc1101 {
 		0x00, // 28 RCCTRL0
 	};
   
-  // prototypes
+// prototypes
 #ifdef _CC1101_DEBUG_CONFIG
   void dumpConfigRegister();
 #endif
@@ -522,7 +522,8 @@ namespace cc1101 {
 #ifdef _CC1101_DEBUG_CONFIG
     dumpConfigRegister();
 #endif
-		cc1101_Select();
+
+    cc1101_Select();
 		
 		sendSPI(CC1100_WRITE_BURST);
 		for (uint8_t i = 0; i<sizeof(initVal); i++) {              // write EEPROM value to cc11001
