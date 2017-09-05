@@ -11,27 +11,35 @@
 #include <EEPROM.h>
 #include "output.h"
 
+#ifdef ESP8266
+	#include <SPI.h>
+#endif
 
 extern String cmdstring;
 
 
 
 namespace cc1101 {
-	#ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
-	#define SS					  8  
+#if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101) 
+  #ifndef ESP8266
+		#define SS					  8  
+  #endif
 	#define PIN_MARK433			  4  // LOW -> 433Mhz | HIGH -> 868Mhz
-	#endif
+#endif
 
-	#define csPin	SS	   // CSN  out
-	#define mosiPin MOSI   // MOSI out
-	#define misoPin MISO   // MISO in
-	#define sckPin  SCK    // SCLK out	
+	#define csPin	15   // CSN  out
+	#define mosiPin 13   // MOSI out
+	#define misoPin 12   // MISO in
+	#define sckPin  14   // SCLK out	
+
 
 	
-	#define CC1101_CONFIG      0x80
-	#define CC1101_STATUS      0xC0
-	#define CC1100_WRITE_BURST 0x40
-	#define CC1100_READ_BURST  0xC0
+	#define CC1100_WRITE_BURST    0x40
+  #define CC1101_WRITE_SINGLE   0x00
+  #define CC1100_READ_BURST     0xC0
+  #define CC1101_READ_SINGLE    0x80
+  #define CC1101_CONFIG         CC1101_READ_SINGLE
+  #define CC1101_STATUS         CC1100_READ_BURST
 	
 	#define CC1100_FREQ2       0x0D  // Frequency control word, high byte
 	#define CC1100_FREQ1       0x0E  // Frequency control word, middle byte
@@ -40,9 +48,18 @@ namespace cc1101 {
 	#define CC1100_IOCFG2      0x00  // GDO2 output configuration
 	#define CC1100_PKTCTRL0    0x08  // Packet config register
 
-	// Status registers
-	#define CC1100_RSSI      0x34 // Received signal strength indication
-	#define CC1100_MARCSTATE 0x35 // Control state machine state
+  uint8_t revision = 0x01;
+  
+	// Status registers - newer version base on 0xF0
+  #define CC1101_PARTNUM_REV01      0xF0 // Chip ID
+  #define CC1101_VERSION_REV01      0xF1 // Chip ID
+  #define CC1100_RSSI_REV01         0xF4 // Received signal strength indication
+  #define CC1100_MARCSTATE_REV01    0xF5 // Control state machine state
+  // Status registers - older version base on 0x30
+  #define CC1101_PARTNUM_REV00      0x30 // Chip ID
+  #define CC1101_VERSION_REV00      0x31 // Chip ID
+  #define CC1100_RSSI_REV00         0x34 // Received signal strength indication
+  #define CC1100_MARCSTATE_REV00    0x35 // Control state machine state
 	 
 	// Strobe commands
 	#define CC1101_SRES     0x30  // reset
@@ -53,14 +70,59 @@ namespace cc1101 {
 	#define CC1100_SIDLE    0x36  // Exit RX / TX, turn off frequency synthesizer
 	#define CC1100_SAFC     0x37  // Perform AFC adjustment of the frequency synthesizer
 	#define CC1100_SFTX     0x3B  // Flush the TX FIFO buffer.
+	#define CC1101_SNOP 	  0x3D	// 
+
+  enum CC1101_MarcState {
+    MarcStateSleep          = 0x00u
+  , MarcStateIdle           = 0x01u
+  , MarcStateXOff           = 0x02u
+  , MarcStateVConnManCal    = 0x03u
+  , MarcStateRegOnManCal    = 0x04u
+  , MarcStateManCal         = 0x05u
+  , MarcStateVConnFSWakeUp  = 0x06u
+  , MarcStateRegOnFSWakeUp  = 0x07u
+  , MarcStateStartCalibrate = 0x08u
+  , MarcStateBWBoost        = 0x09u
+  , MarcStateFSLock         = 0x0Au
+  , MarcStateIfadCon        = 0x0Bu
+  , MarcStateEndCalibrate   = 0x0Cu
+  , MarcStateRx             = 0x0Du
+  , MarcStateRxEnd          = 0x0Eu
+  , MarcStateRxRst          = 0x0Fu
+  , MarcStateTxRxSwitch     = 0x10u
+  , MarcStateRxFifoOverflow = 0x11u
+  , MarcStateFsTxOn         = 0x12u
+  , MarcStateTx             = 0x13u
+  , MarcStateTxEnd          = 0x14u
+  , MarcStateRxTxSwitch     = 0x15u
+  , MarcStateTxFifoUnerflow = 0x16u
+  };
+  
+#ifdef ESP8266
+	#define pinAsInput(pin) pinMode(pin, INPUT)
+	#define pinAsOutput(pin) pinMode(pin, OUTPUT)
+	#define pinAsInputPullUp(pin) pinMode(pin, INPUT_PULLUP)
+	
+	#ifndef digitalLow
+		#define digitalLow(pin) digitalWrite(pin, LOW)
+	#endif
+	#ifndef digitalHigh
+		#define digitalHigh(pin) digitalWrite(pin, HIGH)
+	#endif
+	#ifndef isHigh
+		#define isHigh(pin) (digitalRead(pin) == HIGH)
+	#endif
+#endif
 
 	#define wait_Miso()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return; miso_count--; }      // wait until SPI MISO line goes low 
+    #define wait_Miso_rf()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return false; miso_count--; }      // wait until SPI MISO line goes low 
+
 	#define cc1101_Select()   digitalLow(csPin)          // select (SPI) CC1101
 	#define cc1101_Deselect() digitalHigh(csPin) 
 	
-	#define EE_CC1100_CFG        2
+	#define EE_CC1100_CFG        3
 	#define EE_CC1100_CFG_SIZE   0x29
-	#define EE_CC1100_PA         0x30  //  (EE_CC1100_CFG+EE_CC1100_CFG_SIZE)  // 2B
+	#define EE_CC1100_PA         0x30  //  (EE_CC1100_CFG+EE_CC1100_CFG_SIZE)  // 2C
 	#define EE_CC1100_PA_SIZE    8
 	
 	#define PATABLE_DEFAULT      0x84   // 5 dB default value for factory reset
@@ -74,7 +136,7 @@ namespace cc1101 {
 	#define CC1100_STATUS_STATE_BM                 0x70
 	#define CC1100_STATUS_FIFO_BYTES_AVAILABLE_BM  0x0F
 
-		// Chip states
+	// Chip states
 	#define CC1100_STATE_IDLE                      0x00
 	#define CC1100_STATE_RX                        0x10
 	#define CC1100_STATE_TX                        0x20
@@ -84,10 +146,9 @@ namespace cc1101 {
 	#define CC1100_STATE_RX_OVERFLOW               0x60
 	#define CC1100_STATE_TX_UNDERFLOW              0x70
 	
-
-	#ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
-	uint8_t RADINOVARIANT = 0;            // Standardwert welcher je radinoVarinat geändert wird
-	#endif
+#ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
+	uint8_t RADINOVARIANT = 0;            // Standardwert welcher je radinoVarinat geï¿½ndert wird
+#endif
 	static const uint8_t initVal[] PROGMEM = 
 	{
 		      // IDX NAME     RESET   COMMENT
@@ -134,6 +195,8 @@ namespace cc1101 {
 		0x00, // 28 RCCTRL0
 	};
   
+
+ 
 	byte hex2int(byte hex) {    // convert a hexdigit to int    // Todo: printf oder scanf nutzen
 		if (hex >= '0' && hex <= '9') hex = hex - '0';
 		else if (hex >= 'a' && hex <= 'f') hex = hex - 'a' + 10;
@@ -150,29 +213,30 @@ namespace cc1101 {
 		//sprintf(hexstr, "%02X", hex);
 
 		MSG_PRINT(hex, HEX);
-
-
 	}
 
-
 	uint8_t sendSPI(const uint8_t val) {				 // send byte via SPI
+	#ifndef ESP8266
 		SPDR = val;                                      // transfer byte via SPI
 		while (!(SPSR & _BV(SPIF)));                     // wait until SPI operation is terminated
 		return SPDR;
+	#else
+		return SPI.transfer(val);
+	#endif
 	}
 
-	uint8_t cmdStrobe(const uint8_t cmd) {                  // send command strobe to the CC1101 IC via SPI
+	uint8_t cmdStrobe(const uint8_t cmd) {              // send command strobe to the CC1101 IC via SPI
 		cc1101_Select();                                // select CC1101
-		wait_Miso();                                    // wait until MISO goes low
+		wait_Miso_rf();                                 // wait until MISO goes low
 		uint8_t ret = sendSPI(cmd);                     // send strobe command
-		wait_Miso();                                    // wait until MISO goes low
+		wait_Miso_rf();                                 // wait until MISO goes low
 		cc1101_Deselect();                              // deselect CC1101
-		return ret;					// Chip Status Byte
+		return ret;										// Chip Status Byte
 	}
 
 	uint8_t readReg(const uint8_t regAddr, const uint8_t regType) {       // read CC1101 register via SPI
 		cc1101_Select();                                // select CC1101
-		wait_Miso();                                    // wait until MISO goes low
+		wait_Miso_rf();                                    // wait until MISO goes low
 		sendSPI(regAddr | regType);                     // send register address
 		uint8_t val = sendSPI(0x00);                    // read result
 		cc1101_Deselect();                              // deselect CC1101
@@ -218,117 +282,107 @@ namespace cc1101 {
 	}
 
 
-  void readCCreg(const uint8_t reg) {   // read CC11001 register
-    uint8_t var;
-    uint8_t hex;
-    uint8_t n;
+	void readCCreg(const uint8_t reg) {   // read CC11001 register
+		uint8_t var;
+		uint8_t hex;
+		uint8_t n;
 
-       if (cmdstring.charAt(3) == 'n' && isHexadecimalDigit(cmdstring.charAt(4))) {   // C<reg>n<anz>  gibt anz+2 fortlaufende register zurueck
-           hex = (uint8_t)cmdstring.charAt(4);
-           n = hex2int(hex);
-           if (reg < 0x2F) {
-              MSG_PRINT("C");
-              printHex2(reg);
-              MSG_PRINT("n");
-              n += 2;
-              printHex2(n);
-              MSG_PRINT("=");
-              for (uint8_t i = 0; i < n; i++) {
-                 var = readReg(reg + i, CC1101_CONFIG);
-                 printHex2(var);
-              }
-              MSG_PRINTLN("");
-           }
-       }
-       else {
-       if (reg < 0x3E) {
-          if (reg < 0x2F) {
-             var = readReg(reg, CC1101_CONFIG);
-          }
-          else {
-             var = readReg(reg, CC1101_STATUS);
-          }
-          MSG_PRINT("C");
-          printHex2(reg);
-          MSG_PRINT(" = ");
-          printHex2(var);
-          MSG_PRINTLN("");
-       }
-       else if (reg == 0x3E) {                   // patable
-          MSG_PRINT(F("C3E = "));
-          readPatable();
-       }
-       else if (reg == 0x99) {                   // alle register
-         for (uint8_t i = 0; i < 0x2f; i++) {
-           if (i == 0 || i == 0x10 || i == 0x20) {
-             if (i > 0) {
-               MSG_PRINT(" ");
-             }
-             MSG_PRINT(F("ccreg "));
-             printHex2(i);
-             MSG_PRINT(F(": "));
-           }
-           var = readReg(i, CC1101_CONFIG);
-           printHex2(var);
-           MSG_PRINT(" ");
-         }
-         MSG_PRINTLN("");
-       }
-     }
-  }
-
-  void commandStrobes(void) {
-    uint8_t hex;
-    uint8_t reg;
-    uint8_t val;
-    uint8_t val1;
-  
-    if (isHexadecimalDigit(cmdstring.charAt(3))) {
-        hex = (uint8_t)cmdstring.charAt(3);
-        reg = hex2int(hex) + 0x30;
-        if (reg < 0x3e) {
-             val = cmdStrobe(reg);
-             delay(1);
-             val1 = cmdStrobe(0x3D);        //  No operation. May be used to get access to the chip status byte.
-             MSG_PRINT(F("cmdStrobeReg "));
-             printHex2(reg);
-             MSG_PRINT(F(" chipStatus "));
-             val = val >> 4;
-             MSG_PRINT(val, HEX);
-             MSG_PRINT(F(" delay1 "));
-             val = val1 >> 4;
-             MSG_PRINT(val, HEX);
-             MSG_PRINTLN("");
-         }
-     }
-  }
-
-
-  void writeCCreg(uint8_t reg, uint8_t var) {    // write CC11001 register
-
-    if (reg > 1 && reg < 0x40) {
-           writeReg(reg-2, var);
-           MSG_PRINT("W");
-           printHex2(reg);
-           printHex2(var);
-           MSG_PRINTLN("");
-    }
-  }
-
-
-void writeCCpatable(uint8_t var) {           // write 8 byte to patable (kein pa ramping)
-	for (uint8_t i = 0; i < 8; i++) {
-		if (i == 1) {
-			EEPROM.write(EE_CC1100_PA + i, var);
+		if (cmdstring.charAt(3) == 'n' && isHexadecimalDigit(cmdstring.charAt(4))) {   // C<reg>n<anz>  gibt anz+2 fortlaufende register zurueck
+		   hex = (uint8_t)cmdstring.charAt(4);
+		   n = hex2int(hex);
+		   if (reg < 0x2F) {
+			  MSG_PRINT("C");
+			  printHex2(reg);
+			  MSG_PRINT("n");
+			  n += 2;
+			  printHex2(n);
+			  MSG_PRINT("=");
+			  for (uint8_t i = 0; i < n; i++) {
+				 var = readReg(reg + i, CC1101_CONFIG);
+				 printHex2(var);
+			  }
+			  MSG_PRINTLN("");
+		   }
 		} else {
-			EEPROM.write(EE_CC1100_PA + i, 0);
+		if (reg < 0x3E) {
+		  if (reg < 0x2F) {
+			 var = readReg(reg, CC1101_CONFIG);
+		  } else {
+			 var = readReg(reg, CC1101_STATUS);
+		  }
+		  MSG_PRINT("C");
+		  printHex2(reg);
+		  MSG_PRINT(" = ");
+		  printHex2(var);
+		  MSG_PRINTLN("");
+		} else if (reg == 0x3E) {                   // patable
+		  MSG_PRINT(F("C3E = "));
+		  readPatable();
+		} else if (reg == 0x99) {                   // alle register
+		 for (uint8_t i = 0; i < 0x2f; i++) {
+		   if (i == 0 || i == 0x10 || i == 0x20) {
+			 if (i > 0) {
+			   MSG_PRINT(" ");
+			 }
+			 MSG_PRINT(F("ccreg "));
+			 printHex2(i);
+			 MSG_PRINT(F(": "));
+		   }
+		   var = readReg(i, CC1101_CONFIG);
+		   printHex2(var);
+		   MSG_PRINT(" ");
+		 }
+			MSG_PRINTLN("");
+		}
 		}
 	}
-	writePatable();
-}
 
+	void commandStrobes(void) {
+		uint8_t hex;
+		uint8_t reg;
+		uint8_t val;
+		uint8_t val1;
 
-  
+		if (isHexadecimalDigit(cmdstring.charAt(3))) {
+			hex = (uint8_t)cmdstring.charAt(3);
+			reg = hex2int(hex) + 0x30;
+			if (reg < 0x3e) {
+				 val = cmdStrobe(reg);
+				 delay(1);
+				 val1 = cmdStrobe(0x3D);        //  No operation. May be used to get access to the chip status byte.
+				 MSG_PRINT(F("cmdStrobeReg "));
+				 printHex2(reg);
+				 MSG_PRINT(F(" chipStatus "));
+				 val = val >> 4;
+				 MSG_PRINT(val, HEX);
+				 MSG_PRINT(F(" delay1 "));
+				 val = val1 >> 4;
+				 MSG_PRINT(val, HEX);
+				 MSG_PRINTLN("");
+			 }
+		 }
+	}
+
+	void writeCCreg(uint8_t reg, uint8_t var) {    // write CC11001 register
+		if (reg > 1 && reg < 0x40) {
+			   writeReg(reg-2, var);
+			   MSG_PRINT("W");
+			   printHex2(reg);
+			   printHex2(var);
+			   MSG_PRINTLN("");
+		}
+	}
+
+	void writeCCpatable(uint8_t var) {           // write 8 byte to patable (kein pa ramping)
+		for (uint8_t i = 0; i < 8; i++) {
+			if (i == 1) {
+				EEPROM.write(EE_CC1100_PA + i, var);
+			} else {
+				EEPROM.write(EE_CC1100_PA + i, 0);
+			}
+		}
+		writePatable();
+	}
 
 	void ccFactoryReset() {
 		for (uint8_t i = 0; i<sizeof(initVal); i++) {
@@ -341,16 +395,32 @@ void writeCCpatable(uint8_t var) {           // write 8 byte to patable (kein pa
 				EEPROM.write(EE_CC1100_PA + i, 0);
 			}
 		}
+        EEPROM.commit();
 		MSG_PRINTLN("ccFactoryReset done");  
 	}
 
-
+  uint8_t chipVersionRev()
+  {
+    return readReg((revision == 0x01 ? CC1101_VERSION_REV01 : CC1101_VERSION_REV00), CC1101_READ_SINGLE);
+  };
+  
+  uint8_t chipVersion() {
+    uint8_t version = chipVersionRev();
+ 
+    if (revision != 0x00 && (version == 0xFF || version == 0x00)) {
+      revision = 0x00;
+      version = chipVersionRev();
+    }
+    
+    return version;
+  }
+  
 	bool checkCC1101() {
 
-		uint8_t partnum = readReg(0xF0,0x80);  // Partnum
-		uint8_t version = readReg(0xF1,0x80);  // Version
-		DBG_PRINT("CCVersion=");	DBG_PRINTLN(version);
-		DBG_PRINT("CCPartnum=");	DBG_PRINTLN(partnum);
+		uint8_t version = chipVersion();  // Version
+		uint8_t partnum = readReg((revision == 0x01 ? CC1101_PARTNUM_REV01 : CC1101_PARTNUM_REV00), CC1101_READ_SINGLE);  // Partnum
+		DBG_PRINT("CCVersion=");	DBG_PRINTLN("0x" + String(version, HEX));
+		DBG_PRINT("CCPartnum=");	DBG_PRINTLN("0x" + String(partnum, HEX));
 
 		//checks if valid Chip ID is found. Usualy 0x03 or 0x14. if not -> abort
 		if (version == 0x00 || version == 0xFF)
@@ -366,38 +436,37 @@ void writeCCpatable(uint8_t var) {           // write 8 byte to patable (kein pa
 
 	inline void setup()
 	{
+		#ifndef ESP8266
 		pinAsOutput(sckPin);
 		pinAsOutput(mosiPin);
 		pinAsInput(misoPin);
+		#endif
 		pinAsOutput(csPin);                    // set pins for SPI communication
 		
 		#ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
 		pinAsInputPullUp(PIN_MARK433);
 		#endif
-		//// Änderungsbeginn  ---> 
+		//// ï¿½nderungsbeginn  ---> 
 
-
+#ifndef ESP8266
 		SPCR = _BV(SPE) | _BV(MSTR);               // SPI speed = CLK/4
-		/*
-		SPCR = ((1 << SPE) |               		// SPI Enable
-		(0 << SPIE) |              		// SPI Interupt Enable
-		(0 << DORD) |              		// Data Order (0:MSB first / 1:LSB first)
-		(1 << MSTR) |              		// Master/Slave select
-		(0 << SPR1) | (0 << SPR0) |   		// SPI Clock Rate
-		(0 << CPOL) |             		// Clock Polarity (0:SCK low / 1:SCK hi when idle)
-		(0 << CPHA));             		// Clock Phase (0:leading / 1:trailing edge sampling)
-
-		SPSR = (1 << SPI2X);             		// Double Clock Rate
-		*/
-		pinAsInput(PIN_SEND);        // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
 		digitalHigh(csPin);                 // SPI init
 		digitalHigh(sckPin);
 		digitalLow(mosiPin);
+#else
+		SPI.setDataMode(SPI_MODE0);
+		SPI.setBitOrder(MSBFIRST);
+		SPI.begin();
+		SPI.setClockDivider(SPI_CLOCK_DIV4);
+#endif
+		pinAsInput(PIN_RECEIVE);    // gdo2
+		pinAsOutput(PIN_SEND);      // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
 	}
 
+	uint8_t getRevision() { return revision; }
 	uint8_t getRSSI()
 	{
-		return readReg(CC1100_RSSI, CC1101_STATUS);// Pruefen ob Umwandung von uint to int den richtigen Wert zurueck gibt
+		return readReg((revision == 0x01 ? CC1100_RSSI_REV01 : CC1100_RSSI_REV00), CC1101_STATUS);// Pruefen ob Umwandung von uint to int den richtigen Wert zurueck gibt
 	}
 	
 	inline void setIdleMode()
@@ -406,6 +475,10 @@ void writeCCpatable(uint8_t var) {           // write 8 byte to patable (kein pa
 		delay(1);
 	}
 
+	uint8_t currentMode() {
+		return readReg((revision == 0x01 ? CC1100_MARCSTATE_REV01 : CC1100_MARCSTATE_REV00), CC1100_READ_BURST);
+	}
+	
 	void setReceiveMode()
 	{
 		setIdleMode();
@@ -444,6 +517,7 @@ void writeCCpatable(uint8_t var) {           // write 8 byte to patable (kein pa
 		DBG_PRINTLN("POR Done");
 		delay(10);
 
+
 		cc1101_Select();
 		
 		sendSPI(CC1100_WRITE_BURST);
@@ -459,6 +533,8 @@ void writeCCpatable(uint8_t var) {           // write 8 byte to patable (kein pa
 		setReceiveMode();
 	}
 
+
+ 
 	bool regCheck()
 	{
 		

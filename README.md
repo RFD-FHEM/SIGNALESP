@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/RFD-FHEM/SIGNALESP.svg?branch=master)](https://travis-ci.org/RFD-FHEM/SIGNALESP)
+[![Build Status](https://travis-ci.org/RFD-FHEM/SIGNALESP.svg?branch=dev-cc1101)](https://travis-ci.org/RFD-FHEM/SIGNALESP)
 # SIGNALESP uC v3.3 (development version)
 
 System to receive digital signals and provide them to other systems pro demodulatiob. Currently tested with 433 MHZ, but not limited to that frequency or media.
