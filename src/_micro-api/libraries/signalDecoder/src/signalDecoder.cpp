@@ -67,7 +67,7 @@ inline void SignalDetectorClass::addData(const uint8_t value)
 		messageLen++;
 	}
 	else {
-		SDC_PRINTLN("addData overflow!!",18);
+		SDC_PRINTLN("addData overflow!!");
 	}
 }
 
@@ -229,6 +229,9 @@ void SignalDetectorClass::compress_pattern()
 void SignalDetectorClass::processMessage()
 {
 	yield();
+	
+	char buf[13] = {};
+	uint8_t n = 0;
 
 	if (mcDetected == true || messageLen >= minMessageLen) {
 		success = false;
@@ -300,7 +303,7 @@ void SignalDetectorClass::processMessage()
 					uint8_t patternLow;
 					uint8_t patternIdx;
 
-					SDC_PRINT(static_cast<char*>(MSG_START),1);  SDC_PRINT("Ms",2);  SDC_PRINT(SERIAL_DELIMITER,1);
+					SDC_PRINT(MSG_START);  SDC_PRINT("Ms");  SDC_PRINT(SERIAL_DELIMITER);
 					for (uint8_t idx = 0; idx < patternLen; idx++)
 					{
 						if (pattern[idx] == 0 || histo[idx] == 0) continue;
@@ -338,7 +341,7 @@ void SignalDetectorClass::processMessage()
 					}
 					if ((mstart & 1) == 1) {  // ungerade
 						mstart--;
-						(message.getByte(mstart / 2, &n) & 15) | 128;    // high nibble = 8 als Kennzeichen für ungeraden mstart
+						(message.getByte(mstart / 2, &n) & 15) | 128;    // high nibble = 8 als Kennzeichen fï¿½r ungeraden mstart
 						SDC_WRITE(n);
 						mstart += 2;
 					}
@@ -348,9 +351,9 @@ void SignalDetectorClass::processMessage()
 					}
 
 					SDC_PRINT(SERIAL_DELIMITER);
-					SDC_PRINT("C");  SDC_PRINT(clock, HEX);  SDC_PRINT(SERIAL_DELIMITER);
-					SDC_PRINT("S");  SDC_PRINT(sync, HEX);  SDC_PRINT(SERIAL_DELIMITER);
-					SDC_PRINT("R");  SDC_PRINT(rssiValue, HEX);  SDC_PRINT(SERIAL_DELIMITER);
+					n = sprintf(buf, ";C%2X;S%2X;R%2;", clock, sync, rssiValue);
+					SDC_WRITE((const uint8_t *)buf, n);
+
 				}
 				else {
 					SDC_PRINT(MSG_START); SDC_PRINT("MS");  SDC_PRINT(SERIAL_DELIMITER);
@@ -365,6 +368,7 @@ void SignalDetectorClass::processMessage()
 					{
 						SDC_PRINT(message[i]);
 					}
+
 
 					SDC_PRINT(SERIAL_DELIMITER);
 					SDC_PRINT("CP="); SDC_PRINT(clock);     SDC_PRINT(SERIAL_DELIMITER);     // ClockPulse
@@ -568,9 +572,9 @@ void SignalDetectorClass::processMessage()
 						SDC_WRITE(n);
 					}
 
-					SDC_PRINT(SERIAL_DELIMITER);
-					SDC_PRINT("C");  SDC_PRINT(clock, HEX);  SDC_PRINT(SERIAL_DELIMITER);
-					SDC_PRINT("R");  SDC_PRINT(rssiValue, HEX);  SDC_PRINT(SERIAL_DELIMITER);
+					n = sprintf(buf, ";C%2X;R%2;", clock, rssiValue);
+					SDC_WRITE((const uint8_t *) buf, n);
+
 				}
 				else {
 
@@ -587,7 +591,7 @@ void SignalDetectorClass::processMessage()
 						SDC_PRINT(message[i]);
 					}
 					//String postamble;
-					SDC_PRINT(SERIAL_DELIMITER);
+
 					SDC_PRINT("CP="); SDC_PRINT(clock);     SDC_PRINT(SERIAL_DELIMITER);    // ClockPulse, (not valid for manchester)
 					SDC_PRINT("R=");  SDC_PRINT(rssiValue); SDC_PRINT(SERIAL_DELIMITER);     // Signal Level (RSSI)
 				}
@@ -610,7 +614,7 @@ void SignalDetectorClass::processMessage()
 #endif
 		}
 	}
-	if (!m_truncated)  // Todo: Eventuell auf vollen Puffer prüfen
+	if (!m_truncated)  // Todo: Eventuell auf vollen Puffer prï¿½fen
 	{
 		reset();
 	}
@@ -648,10 +652,7 @@ void SignalDetectorClass::reset()
 }
 
 
-void SignalDetectorClass::setStreamOutput(WiFiClient *port)
-{
-	*msgPort = *port;
-}
+
 
 
 const status SignalDetectorClass::getState()
@@ -706,6 +707,23 @@ void SignalDetectorClass::printOut()
 		DBG_PRINT("]");
 	}
 	DBG_PRINTLN();
+}
+
+size_t SignalDetectorClass::write(const uint8_t *buf, size_t size)
+{
+	return _streamCallback(buf, size);
+}
+
+
+size_t SignalDetectorClass::write(const char *str) {
+	if (str == NULL)
+		return 0;
+	return write((const uint8_t *)str, strlen(str));
+}
+
+size_t SignalDetectorClass::write(uint8_t b)
+{
+	return size_t();
 }
 
 int8_t SignalDetectorClass::findpatt(const int val)
@@ -799,7 +817,7 @@ bool SignalDetectorClass::getClock()
 
 bool SignalDetectorClass::getSync()
 {
-	// Durchsuchen aller Musterpulse und prueft ob darin ein Sync Faktor enthalten ist. Anschließend wird verifiziert ob dieser Syncpuls auch im Signal nacheinander uebertragen wurde
+	// Durchsuchen aller Musterpulse und prueft ob darin ein Sync Faktor enthalten ist. Anschlieï¿½end wird verifiziert ob dieser Syncpuls auch im Signal nacheinander uebertragen wurde
 	//
 #if DEBUGDETECT > 3
 	DBG_PRINTLN("  --  Searching Sync  -- ");
@@ -1283,7 +1301,7 @@ const bool ManchesterpatternDecoder::doDecode() {
 
 #endif
 					//pdec->printOut();
-					pdec->bufferMove(i);   // Todo: BufferMove könnte in die Serielle Ausgabe verschoben werden, das würde ein paar Mikrosekunden Zeit sparen
+					pdec->bufferMove(i);   // Todo: BufferMove kï¿½nnte in die Serielle Ausgabe verschoben werden, das wï¿½rde ein paar Mikrosekunden Zeit sparen
 										   //pdec->m_truncated = true;  // Flag that we truncated the message array and want to receiver some more data
 					mc_start_found = false;  // This will break serval unit tests. Normaly setting this to false shoud be done by reset, needs to be checked if reset shoud be called after hex string is printed out
 
