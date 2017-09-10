@@ -38,9 +38,20 @@
 #endif
 #define DEBUG 1
 
-#define ETHERNET_PRINT  // Quick hack to enable ethernet output in signalDecoder Lib
+//#define ETHERNET_PRINT  // Quick hack to enable ethernet output in signalDecoder Lib
+//#include <output.h>
+#include <ESP8266WiFi.h>
 
-#include <output.h>
+extern WiFiClient serverClient;
+#define DBG_PRINTER Serial
+
+#define SDC_PRINT(p1,p2) { _streamCallback(p1,p2); }
+#define SDC_PRINTLN(...) { _streamCallback(__VA_ARGS__);_streamCallback("\n,1"); }
+#define SDC_WRITE(...) { _streamCallback(__VA_ARGS__); }
+#define DBG_PRINT(...) { DBG_PRINTER.print(__VA_ARGS__); }
+#define DBG_PRINTLN(...) { DBG_PRINTER.println(__VA_ARGS__); }
+
+
 #include <bitstore.h>
 #include <FastDelegate.h>
 
@@ -79,7 +90,10 @@ public:
 	bool decode(const int* pulse);
 	const status getState();
 	typedef fastdelegate::FastDelegate0<uint8_t> FuncRetuint8t;
+	typedef fastdelegate::FastDelegate2<char*, uint8_t> Func2pRetuint8t;
+
 	void setRSSICallback(FuncRetuint8t callbackfunction) { _rssiCallback = callbackfunction; }
+	void setStreamCallback(Func2pRetuint8t callbackfunction) { _streamCallback = callbackfunction; }
 
 
 	//private:
@@ -119,6 +133,8 @@ public:
 	uint8_t mcMinBitLen;					// min bit Length
 	uint8_t rssiValue;						// Holds the RSSI value retrieved via a rssi callback
 	FuncRetuint8t _rssiCallback = NULL;			// Holds the pointer to a callback Function
+	Func2pRetuint8t _streamCallback;		// Holds the pointer to a callback Function
+	Stream *msgPort;						// Holds a pointer to a stream object for outputting
 
 	void addData(const uint8_t value);
 	void addPattern();

@@ -5,7 +5,7 @@
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
 
-#define CMP_CC1101
+//#define CMP_CC1101
 
 #ifdef CMP_CC1101
 	#define PIN_RECEIVE            5
@@ -99,7 +99,7 @@ void configCMD();
 void storeFunctions(const int8_t ms = 1, int8_t mu = 1, int8_t mc = 1);
 void getFunctions(bool *ms, bool *mu, bool *mc);
 uint8_t rssiCallback() { return 0; }; // Dummy return if no rssi value can be retrieved from receiver
-
+uint8_t writeCallback(char *buf,uint8_t len); 
 
 
 bool startWPS() {
@@ -238,6 +238,9 @@ void setup() {
 #endif
 
 	cmdstring.reserve(40);
+
+	//musterDec.setStreamOutput(&serverClient);
+
 }
 
 void ICACHE_RAM_ATTR cronjob(void *pArg) {
@@ -347,6 +350,16 @@ void disableReceive() {
       cc1101::setIdleMode();
   #endif
 }
+
+
+//============================== Write callback =========================================
+uint8_t writeCallback(char *buf, uint8_t len=1)
+{
+	if (serverClient.available())
+		serverClient.write(buf, len);
+
+}
+
 
 //============================== IT_Send =========================================
 
@@ -800,13 +813,14 @@ inline void ethernetEvent()
 			serverClient = Server.available();
 			DBG_PRINT("New client: ");
 			DBG_PRINTLN(serverClient.remoteIP());
+			musterDec.setStreamOutput(&serverClient);
 			return;
 		}
 		//no free/disconnected spot so reject
 //		WiFiClient newClient = Server.available();
 //		newClient.stop();
 	}
-//	yield();
+	//yield();
 }
 
 void serialEvent()
