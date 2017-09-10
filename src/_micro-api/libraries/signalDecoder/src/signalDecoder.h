@@ -45,9 +45,9 @@
 extern WiFiClient serverClient;
 #define DBG_PRINTER Serial
 
-#define SDC_PRINT(p1,p2) { _streamCallback(p1,p2); }
-#define SDC_PRINTLN(...) { _streamCallback(__VA_ARGS__);_streamCallback("\n,1"); }
-#define SDC_WRITE(...) { _streamCallback(__VA_ARGS__); }
+#define SDC_PRINT(...) { write(__VA_ARGS__); }
+#define SDC_PRINTLN(...) { write(__VA_ARGS__); write("\n"); }
+#define SDC_WRITE(...) { write(__VA_ARGS__); }
 #define DBG_PRINT(...) { DBG_PRINTER.print(__VA_ARGS__); }
 #define DBG_PRINTLN(...) { DBG_PRINTER.println(__VA_ARGS__); }
 
@@ -64,9 +64,9 @@ extern WiFiClient serverClient;
 #define maxPulse 32001  // Magic Pulse Length
 
 
-#define SERIAL_DELIMITER ';'
-#define MSG_START char(0x2)			// this is a non printable Char
-#define MSG_END char(0x3)			// this is a non printable Char
+#define SERIAL_DELIMITER  char(';')
+#define MSG_START  char(0x2)			// this is a non printable Char
+#define MSG_END  char(0x3)			// this is a non printable Char
 //#define DEBUGDETECT 1
 //#define DEBUGDETECT 255  // Very verbose output
 //#define DEBUGDECODE 1
@@ -90,7 +90,7 @@ public:
 	bool decode(const int* pulse);
 	const status getState();
 	typedef fastdelegate::FastDelegate0<uint8_t> FuncRetuint8t;
-	typedef fastdelegate::FastDelegate2<char*, uint8_t> Func2pRetuint8t;
+	typedef fastdelegate::FastDelegate2<const uint8_t*, uint8_t, size_t> Func2pRetuint8t;
 
 	void setRSSICallback(FuncRetuint8t callbackfunction) { _rssiCallback = callbackfunction; }
 	void setStreamCallback(Func2pRetuint8t callbackfunction) { _streamCallback = callbackfunction; }
@@ -132,7 +132,7 @@ public:
 	bool mcDetected;						// MC Signal alread detected flag
 	uint8_t mcMinBitLen;					// min bit Length
 	uint8_t rssiValue;						// Holds the RSSI value retrieved via a rssi callback
-	FuncRetuint8t _rssiCallback = NULL;			// Holds the pointer to a callback Function
+	FuncRetuint8t _rssiCallback;			// Holds the pointer to a callback Function
 	Func2pRetuint8t _streamCallback;		// Holds the pointer to a callback Function
 	Stream *msgPort;						// Holds a pointer to a stream object for outputting
 
@@ -151,6 +151,9 @@ public:
 	const bool inTol(const int val, const int set, const int tolerance); // checks if a value is in tolerance range
 
 	void printOut();
+	size_t write(const uint8_t *buffer, size_t size);
+	size_t write(const char *str);
+	size_t write(uint8_t b);
 
 	int8_t findpatt(const int val);              // Finds a pattern in our pattern store. returns -1 if te pattern is not found
 												 //bool validSequence(const int *a, const int *b);     // checks if two pulses are basically valid in terms of on-off signals

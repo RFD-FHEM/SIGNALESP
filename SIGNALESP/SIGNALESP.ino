@@ -99,7 +99,7 @@ void configCMD();
 void storeFunctions(const int8_t ms = 1, int8_t mu = 1, int8_t mc = 1);
 void getFunctions(bool *ms, bool *mu, bool *mc);
 uint8_t rssiCallback() { return 0; }; // Dummy return if no rssi value can be retrieved from receiver
-uint8_t writeCallback(char *buf,uint8_t len); 
+uint8_t writeCallback(const uint8_t *buf,uint8_t len);
 
 
 bool startWPS() {
@@ -353,11 +353,12 @@ void disableReceive() {
 
 
 //============================== Write callback =========================================
-uint8_t writeCallback(char *buf, uint8_t len=1)
+uint8_t writeCallback(const uint8_t *buf, uint8_t len=1)
 {
 	if (serverClient.available())
-		serverClient.write(buf, len);
 
+		serverClient.write(buf, len);
+	//serverClient.write("test");
 }
 
 
