@@ -216,6 +216,8 @@ void setup() {
 #ifdef comp_cc1101
 	if (!hasCC1101 || cc1101::regCheck()) {
 #endif
+	
+	musterDec.setStreamCallback(writeCallback);
 	enableReceive();
     DBG_PRINTLN(F("receiver enabled"));
 #ifdef comp_cc1101
@@ -306,7 +308,7 @@ void disableReceive() {
 //============================== Write callback =========================================
 size_t writeCallback(const uint8_t *buf, uint8_t len=1)
 {
-	Serial.print("Called writeCallback");
+	DBG_PRINTLN("Called writeCallback");
 	while (!serverClient.available())
 		yield();
 
