@@ -89,7 +89,7 @@ void configCMD();
 void storeFunctions(const int8_t ms = 1, int8_t mu = 1, int8_t mc = 1);
 void getFunctions(bool *ms, bool *mu, bool *mc);
 uint8_t rssiCallback() { return 0; }; // Dummy return if no rssi value can be retrieved from receiver
-uint8_t writeCallback(const uint8_t *buf,uint8_t len);
+size_t writeCallback(const uint8_t *buf,uint8_t len);
 
 
 bool startWPS() {
@@ -226,7 +226,6 @@ void setup() {
 
 	cmdstring.reserve(40);
 
-	//musterDec.setStreamOutput(&serverClient);
 
 }
 
@@ -305,11 +304,13 @@ void disableReceive() {
 
 
 //============================== Write callback =========================================
-uint8_t writeCallback(const uint8_t *buf, uint8_t len=1)
+size_t writeCallback(const uint8_t *buf, uint8_t len=1)
 {
-	if (serverClient.available())
+	Serial.print("Called writeCallback");
+	while (!serverClient.available())
+		yield();
 
-		serverClient.write(buf, len);
+	return serverClient.write(buf, len);
 	//serverClient.write("test");
 
 }

@@ -711,6 +711,8 @@ void SignalDetectorClass::printOut()
 
 size_t SignalDetectorClass::write(const uint8_t *buf, size_t size)
 {
+	if (_streamCallback == NULL)
+		return 0;
 	return _streamCallback(buf, size);
 }
 

@@ -45,9 +45,9 @@
 extern WiFiClient serverClient;
 #define DBG_PRINTER Serial
 
-#define SDC_PRINT(...) { write(__VA_ARGS__); }
-#define SDC_PRINTLN(...) { write(__VA_ARGS__); write("\n"); }
-#define SDC_WRITE(...) { write(__VA_ARGS__); }
+#define SDC_PRINT(...) { Serial.print(' sdc_print '); write(__VA_ARGS__); }
+#define SDC_PRINTLN(...) { Serial.print(' sdc_println '); write(__VA_ARGS__); write("\n"); }
+#define SDC_WRITE(...) { Serial.print(' sdc_write '); write(__VA_ARGS__); }
 #define DBG_PRINT(...) { DBG_PRINTER.print(__VA_ARGS__); }
 #define DBG_PRINTLN(...) { DBG_PRINTER.println(__VA_ARGS__); }
 
@@ -132,8 +132,8 @@ public:
 	bool mcDetected;						// MC Signal alread detected flag
 	uint8_t mcMinBitLen;					// min bit Length
 	uint8_t rssiValue;						// Holds the RSSI value retrieved via a rssi callback
-	FuncRetuint8t _rssiCallback;			// Holds the pointer to a callback Function
-	Func2pRetuint8t _streamCallback;		// Holds the pointer to a callback Function
+	FuncRetuint8t _rssiCallback=NULL;		// Holds the pointer to a callback Function
+	Func2pRetuint8t _streamCallback=NULL;	// Holds the pointer to a callback Function
 	Stream *msgPort;						// Holds a pointer to a stream object for outputting
 
 
@@ -147,8 +147,8 @@ public:
 	void calcHisto(const uint8_t startpos = 0, uint8_t endpos = 0);
 	bool getClock(); // Searches a clock in a given signal
 	bool getSync();	 // Searches clock and sync in given Signal
-	int8_t printMsgRaw(uint8_t m_start, const uint8_t m_end, const String *preamble = NULL, const String *postamble = NULL);
-	void printMsgStr(const String *first, const String *second, const String *third);
+	//int8_t printMsgRaw(uint8_t m_start, const uint8_t m_end, const String *preamble = NULL, const String *postamble = NULL);
+	//void printMsgStr(const String *first, const String *second, const String *third);
 	const bool inTol(const int val, const int set, const int tolerance); // checks if a value is in tolerance range
 
 	void printOut();
