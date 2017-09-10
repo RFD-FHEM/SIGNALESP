@@ -134,10 +134,6 @@ void setup() {
 
   Serial.println("\n\n");
 
-#ifdef DEBUG
-  Serial.println("SPI: MOSI " + String(MOSI) + ", MISO " + String(MISO) + ", SCK " + String(SCK) + ", CS " + String(SS));
-#endif
-
   pinMode(PIN_RECEIVE, INPUT);
   pinMode(PIN_LED, OUTPUT);
   
@@ -361,12 +357,15 @@ void disableReceive() {
 
 
 //============================== Write callback =========================================
-uint16_t writeCallback(const uint8_t *buf, uint16_t len)
+size_t writeCallback(const uint8_t *buf, size_t len)
 {
-  Serial.println("writeCallback: " + String(len));
+  size_t res = 0;
+  
 	if (serverClient && serverClient.connected())
-		serverClient.write(buf, len);
+		res = serverClient.write(buf, len);
 	//serverClient.write("test");
+
+  return res;
 }
 
 

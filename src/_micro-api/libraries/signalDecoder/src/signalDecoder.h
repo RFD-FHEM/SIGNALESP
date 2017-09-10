@@ -45,7 +45,7 @@
 //extern WiFiClient serverClient;
 #define DBG_PRINTER Serial
 
-typedef uint16_t (*WriteCallback) (const uint8_t *buffer, uint16_t size);
+typedef size_t (*WriteCallback) (const uint8_t *buffer, size_t size);
 
 #define SDC_PRINT(...) { write(__VA_ARGS__); }
 #define SDC_PRINTLN(...) { write(__VA_ARGS__); write("\n"); }
@@ -158,9 +158,9 @@ public:
 	const bool inTol(const int val, const int set, const int tolerance); // checks if a value is in tolerance range
 
 	void printOut();
-	uint16_t write(const uint8_t *buffer, uint16_t size);
-	uint16_t write(const char *str);
-	uint16_t write(uint8_t b);
+	size_t write(const uint8_t *buffer, size_t size);
+	size_t write(const char *str);
+	size_t write(uint8_t b);
 
 	int8_t findpatt(const int val);              // Finds a pattern in our pattern store. returns -1 if te pattern is not found
 												 //bool validSequence(const int *a, const int *b);     // checks if two pulses are basically valid in terms of on-off signals
