@@ -40,10 +40,12 @@
 
 //#define ETHERNET_PRINT  // Quick hack to enable ethernet output in signalDecoder Lib
 //#include <output.h>
-#include <ESP8266WiFi.h>
+//#include <ESP8266WiFi.h>
 
-extern WiFiClient serverClient;
+//extern WiFiClient serverClient;
 #define DBG_PRINTER Serial
+
+typedef uint16_t (*WriteCallback) (const uint8_t *buffer, uint16_t size);
 
 #define SDC_PRINT(...) { write(__VA_ARGS__); }
 #define SDC_PRINTLN(...) { write(__VA_ARGS__); write("\n"); }
@@ -79,7 +81,14 @@ class SignalDetectorClass
 {
 	friend class ManchesterpatternDecoder;
 
+protected:
+	WriteCallback writeCallback = NULL;
+	
 public:
+	void registerWriteCallback(WriteCallback callback) {
+		writeCallback = callback;
+	};
+
 	SignalDetectorClass() : first(buffer), last(first + 1), message(4) {
 		buffer[0] = 0; reset(); mcMinBitLen = 17;
 		MsMoveCount = 0;
@@ -151,14 +160,12 @@ public:
 	const bool inTol(const int val, const int set, const int tolerance); // checks if a value is in tolerance range
 
 	void printOut();
-	size_t write(const uint8_t *buffer, size_t size);
-	size_t write(const char *str);
-	size_t write(uint8_t b);
+	uint16_t write(const uint8_t *buffer, uint16_t size);
+	uint16_t write(const char *str);
+	uint16_t write(uint8_t b);
 
 	int8_t findpatt(const int val);              // Finds a pattern in our pattern store. returns -1 if te pattern is not found
 												 //bool validSequence(const int *a, const int *b);     // checks if two pulses are basically valid in terms of on-off signals
-
-
 };
 
 class ManchesterpatternDecoder

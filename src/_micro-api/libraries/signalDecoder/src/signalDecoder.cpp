@@ -704,21 +704,27 @@ void SignalDetectorClass::printOut()
 	DBG_PRINTLN();
 }
 
-size_t SignalDetectorClass::write(const uint8_t *buf, size_t size)
+uint16_t SignalDetectorClass::write(const uint8_t *buf, uint16_t size)
 {
-	return _streamCallback(buf, size);
+	if (writeCallback != NULL)
+		return writeCallback(buf, size);
+	else {
+		Serial.print("\nSignalDetectorClass::write: size " + String(size) + "\n'");
+		Serial.write(buf, size);
+		Serial.print("'");
+	}
 }
 
 
-size_t SignalDetectorClass::write(const char *str) {
+uint16_t SignalDetectorClass::write(const char *str) {
 	if (str == NULL)
 		return 0;
 	return write((const uint8_t *)str, strlen(str));
 }
 
-size_t SignalDetectorClass::write(uint8_t b)
+uint16_t SignalDetectorClass::write(uint8_t b)
 {
-	return size_t();
+	return write(&b, 1);
 }
 
 int8_t SignalDetectorClass::findpatt(const int val)

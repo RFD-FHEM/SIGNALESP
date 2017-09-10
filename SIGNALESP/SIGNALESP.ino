@@ -99,7 +99,7 @@ void configCMD();
 void storeFunctions(const int8_t ms = 1, int8_t mu = 1, int8_t mc = 1);
 void getFunctions(bool *ms, bool *mu, bool *mc);
 uint8_t rssiCallback() { return 0; }; // Dummy return if no rssi value can be retrieved from receiver
-uint8_t writeCallback(const uint8_t *buf,uint8_t len);
+//uint16_t writeCallback(const uint8_t *buf,uint8_t len);
 
 
 bool startWPS() {
@@ -147,6 +147,9 @@ void setup() {
 
   initEEPROM();
 
+  // register write callback
+  musterDec.registerWriteCallback(writeCallback);
+  
 #ifdef CMP_CC1101
   cc1101::CCinit();
   hasCC1101 = cc1101::checkCC1101();
@@ -280,7 +283,9 @@ void loop() {
 //      Serial.println(".");
     switch(c) {
       case 'c':
+#ifdef CMP_CC1101
         Serial.println("marc: 0x" + String(cc1101::currentMode(), HEX));
+#endif
         Serial.println("fifo: " + String(FiFo.count()) + ", max. " + String(fifousage));
 #ifdef _CC1101_DEBUG_CONFIG
         cc1101::dumpConfigRegister();
@@ -304,6 +309,9 @@ void loop() {
         break;
       case 'u':
         Serial.println("uptime: " + uptime());
+        break;
+      case 'w':
+        musterDec.write("Test Test Test\n");
         break;
     }
   }
@@ -353,10 +361,10 @@ void disableReceive() {
 
 
 //============================== Write callback =========================================
-uint8_t writeCallback(const uint8_t *buf, uint8_t len=1)
+uint16_t writeCallback(const uint8_t *buf, uint16_t len)
 {
-	if (serverClient.available())
-
+  Serial.println("writeCallback: " + String(len));
+	if (serverClient && serverClient.connected())
 		serverClient.write(buf, len);
 	//serverClient.write("test");
 }
@@ -814,7 +822,7 @@ inline void ethernetEvent()
 			serverClient = Server.available();
 			DBG_PRINT("New client: ");
 			DBG_PRINTLN(serverClient.remoteIP());
-			musterDec.setStreamOutput(&serverClient);
+//			musterDec.setStreamOutput(&serverClient);
 			return;
 		}
 		//no free/disconnected spot so reject
