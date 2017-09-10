@@ -30,7 +30,6 @@
 */
 #include "signalDecoder.h"
 
-
 void SignalDetectorClass::bufferMove(const uint8_t start)
 {
 	m_truncated = false;
@@ -706,13 +705,7 @@ void SignalDetectorClass::printOut()
 
 uint16_t SignalDetectorClass::write(const uint8_t *buf, uint16_t size)
 {
-	if (writeCallback != NULL)
-		return writeCallback(buf, size);
-	else {
-		Serial.print("\nSignalDetectorClass::write: size " + String(size) + "\n'");
-		Serial.write(buf, size);
-		Serial.print("'");
-	}
+	return (writeCallback != NULL ? writeCallback(buf, size) : Serial.write(buf, size));
 }
 
 

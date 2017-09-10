@@ -75,8 +75,6 @@ typedef uint16_t (*WriteCallback) (const uint8_t *buffer, uint16_t size);
 
 enum status { searching, clockfound, syncfound, detecting };
 
-
-
 class SignalDetectorClass
 {
 	friend class ManchesterpatternDecoder;
@@ -102,7 +100,7 @@ public:
 	typedef fastdelegate::FastDelegate2<const uint8_t*, uint8_t, size_t> Func2pRetuint8t;
 
 	void setRSSICallback(FuncRetuint8t callbackfunction) { _rssiCallback = callbackfunction; }
-	void setStreamCallback(Func2pRetuint8t callbackfunction) { _streamCallback = callbackfunction; }
+//	void setStreamCallback(Func2pRetuint8t callbackfunction) { _streamCallback = callbackfunction; }
 
 
 	//private:
@@ -142,8 +140,8 @@ public:
 	uint8_t mcMinBitLen;					// min bit Length
 	uint8_t rssiValue;						// Holds the RSSI value retrieved via a rssi callback
 	FuncRetuint8t _rssiCallback;			// Holds the pointer to a callback Function
-	Func2pRetuint8t _streamCallback;		// Holds the pointer to a callback Function
-	Stream *msgPort;						// Holds a pointer to a stream object for outputting
+//	Func2pRetuint8t _streamCallback;		// Holds the pointer to a callback Function
+//	Stream *msgPort;						// Holds a pointer to a stream object for outputting
 
 	void addData(const uint8_t value);
 	void addPattern();
