@@ -351,7 +351,7 @@ void SignalDetectorClass::processMessage()
 					}
 
 					SDC_PRINT(SERIAL_DELIMITER);
-					n = sprintf(buf, ";C%2X;S%2X;R%2;", clock, sync, rssiValue);
+					n = sprintf(buf, ";C%X;S%X;R%X;", clock, sync, rssiValue);
 					SDC_WRITE((const uint8_t *)buf, n);
 
 				}
@@ -489,7 +489,7 @@ void SignalDetectorClass::processMessage()
 #endif
 					SDC_PRINT(MSG_START);
 					SDC_PRINT("MC");
-					SDC_PRINT(SERIAL_DELIMITER);
+					SDC_PRINT(SERIAL_DELIMITER);  // Todo: Ausgabe int (16 bit) unterstützen
 					SDC_PRINT("LL="); SDC_PRINT(pattern[mcdecoder.longlow]); SDC_PRINT(SERIAL_DELIMITER);
 					SDC_PRINT("LH="); SDC_PRINT(pattern[mcdecoder.longhigh]); SDC_PRINT(SERIAL_DELIMITER);
 					SDC_PRINT("SL="); SDC_PRINT(pattern[mcdecoder.shortlow]); SDC_PRINT(SERIAL_DELIMITER);
@@ -572,7 +572,7 @@ void SignalDetectorClass::processMessage()
 						SDC_WRITE(n);
 					}
 
-					n = sprintf(buf, ";C%2X;R%2;", clock, rssiValue);
+					n = sprintf(buf, ";C%X;R%X;", clock, rssiValue);
 					SDC_WRITE((const uint8_t *) buf, n);
 
 				}
@@ -725,7 +725,7 @@ size_t SignalDetectorClass::write(const char *str) {
 
 size_t SignalDetectorClass::write(uint8_t b)
 {
-	return size_t();
+	return write(&b, 1);
 }
 
 int8_t SignalDetectorClass::findpatt(const int val)
@@ -1040,23 +1040,28 @@ void ManchesterpatternDecoder::getMessageHexStr(String *message)
 */
 void ManchesterpatternDecoder::printMessageHexStr()
 {
-	char hexStr[] = "00"; // Not really needed
+	//char hexStr[] = "00"; // Not really needed
 
 	char cbuffer[256];
 	uint8_t idx;
 	for (idx = 0; idx <= ManchesterBits.bytecount - 1; ++idx) {
-		//sprintf(cbuffer +(idx*2), "%02X", getMCByte(idx));
+		sprintf(cbuffer +(idx*2), "%02X", getMCByte(idx));
 		//SDC_PRINT(hexStr);
+		//pdec->write(hexStr);
+
 	}
 
-	//sprintf(cbuffer + (idx * 2), "%01X", getMCByte(idx) >> 4 & 0xf);
-	//SDC_PRINT(hexStr);
+	sprintf(cbuffer + (idx * 2), "%01X", getMCByte(idx) >> 4 & 0xf);
+	//pdec->write(hexStr);
 	if (ManchesterBits.valcount % 8 > 4 || ManchesterBits.valcount % 8 == 0)
 	{
-		//sprintf(cbuffer + (idx*2)+1, "%01X", getMCByte(idx) & 0xF);
+		sprintf(cbuffer + (idx*2)+1, "%01X", getMCByte(idx) & 0xF);
 		//SDC_PRINT(hexStr);
+		
 	}
 	//pdec->msgPort->print(cbuffer);
+	pdec->write(cbuffer);
+	
 }
 
 

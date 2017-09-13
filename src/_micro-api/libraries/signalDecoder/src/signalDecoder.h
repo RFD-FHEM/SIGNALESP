@@ -45,9 +45,9 @@
 extern WiFiClient serverClient;
 #define DBG_PRINTER Serial
 
-#define SDC_PRINT(...) { Serial.print(' sdc_print '); write(__VA_ARGS__); }
-#define SDC_PRINTLN(...) { Serial.print(' sdc_println '); write(__VA_ARGS__); write("\n"); }
-#define SDC_WRITE(...) { Serial.print(' sdc_write '); write(__VA_ARGS__); }
+#define SDC_PRINT(...) {  write(__VA_ARGS__); }
+#define SDC_PRINTLN(...) {  write(__VA_ARGS__); write("\n"); }
+#define SDC_WRITE(...) {  write(__VA_ARGS__); }
 #define DBG_PRINT(...) { DBG_PRINTER.print(__VA_ARGS__); }
 #define DBG_PRINTLN(...) { DBG_PRINTER.println(__VA_ARGS__); }
 

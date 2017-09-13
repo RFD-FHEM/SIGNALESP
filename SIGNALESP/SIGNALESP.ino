@@ -308,9 +308,9 @@ void disableReceive() {
 //============================== Write callback =========================================
 size_t writeCallback(const uint8_t *buf, uint8_t len=1)
 {
-	DBG_PRINTLN("Called writeCallback");
 	while (!serverClient.available())
 		yield();
+	DBG_PRINTLN("Called writeCallback");
 
 	return serverClient.write(buf, len);
 	//serverClient.write("test");
