@@ -5,7 +5,7 @@
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
 
-//#define CMP_CC1101
+#define CMP_CC1101
 
 #ifdef CMP_CC1101
 	#define PIN_RECEIVE            5
@@ -26,7 +26,7 @@
 #endif
 
 
-//#define _USE_WRITE_BUFFER
+#define _USE_WRITE_BUFFER
 
 #ifdef _USE_WRITE_BUFFER
   const size_t writeBufferSize = 256;
@@ -317,9 +317,10 @@ void loop() {
         unsigned long start = micros();
         for (byte i=0; i<12; i++) // 240 Zeichen
           musterDec.write("Test Test Test Test ");
-        musterDec.write("Test Test 256 =><= ");
+        musterDec.write("Test Test 256=>\n<= ");
         musterDec.write("Test ");
         musterDec.write(MSG_END);
+        musterDec.write("\n");
         Serial.println("elapsed time: " + String(micros() - start) + " us");
         break;
     }
@@ -414,13 +415,13 @@ size_t writeCallback(const uint8_t *buf, size_t len)
     // MSG_END
     void *msgEnd;
     size_t msgEndPos = 0;
-    if ((msgEnd = memchr2(&buf[bufpos], MSG_END, copy)) != NULL) {
+    if ((msgEnd = memchr2(&buf[bufpos], 10, copy)) != NULL) {
       msgEndPos = (size_t)msgEnd - (size_t)&buf[bufpos];
 #ifdef _USE_WRITE_BUFFER_DEBUG
-      Serial.println("writeCallback: MSG_END @" + String(msgEndPos));
+      Serial.println("writeCallback: newline @" + String(msgEndPos));
 #endif  // _USE_WRITE_BUFFER_DEBUG
       copy = msgEndPos;
-      writeBuffer[writeBufferCurrent+msgEndPos] = 10;  // additional \n
+//      writeBuffer[writeBufferCurrent+msgEndPos] = 10;  // additional \n
     }
      
     // copy to buffer
@@ -432,12 +433,12 @@ size_t writeCallback(const uint8_t *buf, size_t len)
 
     // MSG_END detected - force send
     if (msgEndPos > 0)
-      wrote += writeFromBuffer(writeBufferCurrent+1); // additional \n
+      wrote += writeFromBuffer(writeBufferCurrent); // additional \n
 
     // buffer full
     if (writeBufferCurrent == writeBufferSize) {
-      writeBuffer[writeBufferCurrent] = 10; // additional \n
-      wrote += writeFromBuffer(writeBufferCurrent+1); // additional \n
+//      writeBuffer[writeBufferCurrent] = 10; // additional \n
+      wrote += writeFromBuffer(writeBufferCurrent); // additional \n
     }
   }
 #ifdef _USE_WRITE_BUFFER_DEBUG
@@ -459,12 +460,12 @@ size_t writeFromBuffer(size_t len) {
   if (serverClient && serverClient.connected())
     res = serverClient.write(&writeBuffer[0], len);
 
-  if (res > 0) {
-    Serial.println("wrote: " + String(res));
-#ifdef _USE_WRITE_BUFFER_DEBUG
-    dumpBuffer();
-#endif  // _USE_WRITE_BUFFER_DEBUG
-  }
+//  if (res > 0) {
+//    Serial.println("wrote: " + String(res));
+//#ifdef _USE_WRITE_BUFFER_DEBUG
+//    dumpBuffer();
+//#endif  // _USE_WRITE_BUFFER_DEBUG
+//  }
 
   if (len < writeBufferCurrent) {
     memcpy(&writeBuffer[0], &writeBuffer[len], writeBufferCurrent - len);
