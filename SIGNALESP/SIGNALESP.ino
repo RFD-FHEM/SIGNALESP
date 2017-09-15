@@ -26,8 +26,15 @@
 #endif
 
 
+//#define _USE_WRITE_BUFFER
 
+#ifdef _USE_WRITE_BUFFER
+  const size_t writeBufferSize = 256;
+  size_t writeBufferCurrent = 0;
+  uint8_t writeBuffer[writeBufferSize+1]; // one extra buffer for \n
 
+  //#define _USE_WRITE_BUFFER_DEBUG 1
+#endif  // _USE_WRITE_BUFFER
 
 
 #define ETHERNET_PRINT
@@ -307,7 +314,13 @@ void loop() {
         Serial.println("uptime: " + uptime());
         break;
       case 'w':
-        musterDec.write("Test Test Test\n");
+        unsigned long start = micros();
+        for (byte i=0; i<12; i++) // 240 Zeichen
+          musterDec.write("Test Test Test Test ");
+        musterDec.write("Test Test 256 =><= ");
+        musterDec.write("Test ");
+        musterDec.write(MSG_END);
+        Serial.println("elapsed time: " + String(micros() - start) + " us");
         break;
     }
   }
@@ -357,17 +370,112 @@ void disableReceive() {
 
 
 //============================== Write callback =========================================
+#ifdef _USE_WRITE_BUFFER
+#ifdef _USE_WRITE_BUFFER_DEBUG
+void dumpBuffer() {
+//#if _USE_WRITE_BUFFER_DEBUG < 2
+//    return;
+//#endif
+    
+  Serial.println("buffer: ");
+  for (size_t idx=0; idx<writeBufferCurrent+1; idx++) {
+    Serial.printf("%02X ", writeBuffer[idx]);
+    if (idx % 16 == 15)
+      Serial.println();
+  }
+  Serial.println();
+}
+#endif  // _USE_WRITE_BUFFER_DEBUG
+
+uint8_t *memchr2(const uint8_t *ptr, uint8_t ch, size_t size) {
+  for (int i = 0; i < size; i++)
+    if (*ptr++ == ch)
+      return (uint8_t*)ptr;
+  return NULL;
+}
+#endif  // _USE_WRITE_BUFFER
+
 size_t writeCallback(const uint8_t *buf, size_t len)
 {
   size_t res = 0;
-  
-	if (serverClient && serverClient.connected())
-		res = serverClient.write(buf, len);
-	//serverClient.write("test");
+#ifdef _USE_WRITE_BUFFER
+  size_t  remain = len, bufpos = 0, wrote = 0;
 
+#ifdef _USE_WRITE_BUFFER_DEBUG
+    Serial.println("");
+#endif  // _USE_WRITE_BUFFER_DEBUG
+  while (remain > 0) {
+    size_t copy = (remain > writeBufferSize - writeBufferCurrent ? writeBufferSize - writeBufferCurrent : remain);
+#ifdef _USE_WRITE_BUFFER_DEBUG
+    Serial.println("writeBufferCurrent: " + String(writeBufferCurrent) + ", remain: " + String(remain) + ", bufpos: " + String(bufpos) + ", copy: " + String(copy));
+//    dumpBuffer();
+#endif  // _USE_WRITE_BUFFER_DEBUG
+
+    // MSG_END
+    void *msgEnd;
+    size_t msgEndPos = 0;
+    if ((msgEnd = memchr2(&buf[bufpos], MSG_END, copy)) != NULL) {
+      msgEndPos = (size_t)msgEnd - (size_t)&buf[bufpos];
+#ifdef _USE_WRITE_BUFFER_DEBUG
+      Serial.println("writeCallback: MSG_END @" + String(msgEndPos));
+#endif  // _USE_WRITE_BUFFER_DEBUG
+      copy = msgEndPos;
+      writeBuffer[writeBufferCurrent+msgEndPos] = 10;  // additional \n
+    }
+     
+    // copy to buffer
+    memcpy(&writeBuffer[writeBufferCurrent], &buf[bufpos], copy);
+    writeBufferCurrent += copy;
+    bufpos += copy;
+    remain -= copy;
+    res += copy;
+
+    // MSG_END detected - force send
+    if (msgEndPos > 0)
+      wrote += writeFromBuffer(writeBufferCurrent+1); // additional \n
+
+    // buffer full
+    if (writeBufferCurrent == writeBufferSize) {
+      writeBuffer[writeBufferCurrent] = 10; // additional \n
+      wrote += writeFromBuffer(writeBufferCurrent+1); // additional \n
+    }
+  }
+#ifdef _USE_WRITE_BUFFER_DEBUG
+//  dumpBuffer();
+  Serial.println("writeBufferCurrent: " + String(writeBufferCurrent) + ", wrote: " + String(wrote));
+#endif  // _USE_WRITE_BUFFER_DEBUG
+#else // _USE_WRITE_BUFFER
+  if (serverClient && serverClient.connected())
+    res = serverClient.write(buf, len);
+#endif // _USE_WRITE_BUFFER
+  
   return res;
 }
 
+#ifdef _USE_WRITE_BUFFER
+size_t writeFromBuffer(size_t len) {
+  size_t res = 0;
+
+  if (serverClient && serverClient.connected())
+    res = serverClient.write(&writeBuffer[0], len);
+
+  if (res > 0) {
+    Serial.println("wrote: " + String(res));
+#ifdef _USE_WRITE_BUFFER_DEBUG
+    dumpBuffer();
+#endif  // _USE_WRITE_BUFFER_DEBUG
+  }
+
+  if (len < writeBufferCurrent) {
+    memcpy(&writeBuffer[0], &writeBuffer[len], writeBufferCurrent - len);
+    writeBufferCurrent -= len;
+  } else {
+      writeBufferCurrent = 0;
+  }
+  
+  return res;
+}
+#endif  // _USE_WRITE_BUFFER
 
 //============================== IT_Send =========================================
 
