@@ -96,6 +96,10 @@ bool startWPS() {
 	// from https://gist.github.com/copa2/fcc718c6549721c210d614a325271389
 	// wpstest.ino
 	Serial.println("WPS config start");
+	WiFi.disconnect();
+	WiFi.mode(WIFI_STA); // WPS only works in station mode
+	
+	delay(1000);
 	bool wpsSuccess = WiFi.beginWPSConfig();
 	if (wpsSuccess) {
 		// Well this means not always success :-/ in case of a timeout we have an empty ssid
@@ -141,24 +145,29 @@ void setup() {
       musterDec.setRSSICallback(&cc1101::getRSSI);                    // Provide the RSSI Callback
   } else 
 #endif
-      musterDec.setRSSICallback(&rssiCallback); // Provide the RSSI Callback    
+	musterDec.setRSSICallback(&rssiCallback); // Provide the RSSI Callback    
 
+												/*
   #ifdef DEBUG
     Serial.printf("\nTry connecting to WiFi with SSID '%s'\n", WiFi.SSID().c_str());
   #endif
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // reading data from EPROM, 
-  while (WiFi.status() == WL_DISCONNECTED) {          // last saved credentials
-	  delay(500);
-	  Serial.print(".");
-  }
+
+	if (WiFi.SSID().length() > 0 )
+	{
+
+		WiFi.mode(WIFI_STA);
+		WiFi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // reading data from EPROM, 
+		while (WiFi.status() == WL_DISCONNECTED) {          // last saved credentials
+			delay(500);
+			Serial.print(".");
+		}
+	}
   wl_status_t status = WiFi.status();
   if (status == WL_CONNECTED) {
   #ifdef DEBUG 
 	   Serial.printf("\nConnected successful to SSID '%s'\n", WiFi.SSID().c_str());
   #endif
-  }
-  else {
+  }  else {
 	Serial.printf("\nCould not connect to WiFi. state='%d'\n", status);
 	Serial.println("Please press WPS button on your router");
 	delay(5000);
@@ -171,41 +180,61 @@ void setup() {
 		while (WiFi.status() == WL_DISCONNECTED) {          // last saved credentials
 			delay(500);
 			Serial.print("."); // show wait for connect to AP
+				
+		}
+		#ifdef DEBUG
+		Serial.print("\nReady! Use 'telnet ");
+		Serial.print(WiFi.localIP());
+		Serial.println(" port 23' to connect");
+		#endif
+
 	}
 
 
   }
+ */
+	WiFiManager wifiManager;
 
-  #ifdef DEBUG
-		Serial.print("\nReady! Use 'telnet ");
-	  Serial.print(WiFi.localIP());
-	  Serial.println(" port 23' to connect");
-  #endif
-  }
+	//wifiManager.setBreakAfterConfig(true);
+	//reset settings - for testing
+	//wifiManager.resetSettings();
+ 
+	//tries to connect to last known settings
+	//if it does not connect it starts an access point with the specified name
+	//here  "NodeDuino" with no password
+	//and goes into a blocking loop awaiting configuration
 
-  WiFiManager wifiManager;
-  wifiManager.setBreakAfterConfig(true);
-  //reset settings - for testing
-  //wifiManager.resetSettings();
+	wifiManager.setConfigPortalTimeout(60);
+  
+	if (!wifiManager.startConfigPortal()) {
 
-  //tries to connect to last known settings
-  //if it does not connect it starts an access point with the specified name
-  //here  "NodeDuino" with no password
-  //and goes into a blocking loop awaiting configuration
-  if (!wifiManager.autoConnect("NodeDuino")) {
-    Serial.println("failed to connect, we should reset as see if it connects");
-    delay(3000);
-    ESP.reset();
-    delay(5000);
-  }
-
-  //if you get here you have connected to the WiFi
-  Serial.println("connected...)");
+		Serial.println("failed to connect, we now enter WPS Mode");
+		delay(3000);
 
 
-  Serial.println("local ip");
-  Serial.println(WiFi.localIP());
+			Serial.printf("\nCould not connect to WiFi. state='%d'\n", WiFi.status());
+			Serial.println("Please press WPS button on your router");
+			delay(5000);
+			if (!startWPS()) {
+				Serial.println("Failed to connect with WPS, will restart ESP now :-(");
+				delay(3500);
+				while (1);
+				//ESP.restart();
+				//ESP.reset();
+			}
 
+		delay(5000);
+	}
+
+	if (WiFi.status() == WL_CONNECTED) {          // last saved credentials
+
+	  //if you get here you have connected to the WiFi
+		Serial.println("connected...)");
+
+
+		Serial.println("local ip");
+		Serial.println(WiFi.localIP());
+	}
 	Server.begin();  // telnet server
 	Server.setNoDelay(true);
 
