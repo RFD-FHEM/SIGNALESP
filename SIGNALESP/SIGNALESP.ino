@@ -21,11 +21,13 @@
 
 
 #define ETHERNET_PRINT
+#include <FS.h>   
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include <ArduinoJson.h>
 
 WiFiServer Server(23);  //  port 23 = telnet
 WiFiClient serverClient;
@@ -91,6 +93,10 @@ void getFunctions(bool *ms, bool *mu, bool *mc);
 uint8_t rssiCallback() { return 0; }; // Dummy return if no rssi value can be retrieved from receiver
 size_t writeCallback(const uint8_t *buf,uint8_t len);
 
+//default custom static IP
+char static_ip[16] = "10.22.0.200";
+char static_gw[16] = "0.0.0.0";
+char static_sn[16] = "255.255.255.0";
 
 bool startWPS() {
 	// from https://gist.github.com/copa2/fcc718c6549721c210d614a325271389
@@ -116,7 +122,14 @@ bool startWPS() {
 }
 
 
+//flag for saving data
+bool shouldSaveConfig = false;
 
+//callback notifying us of the need to save config
+void saveConfigCallback() {
+	DBG_PRINTLN("Should save config");
+	shouldSaveConfig = true;
+}
 
 void setup() {
 	//ESP.wdtEnable(2000);
@@ -193,6 +206,50 @@ void setup() {
 
   }
  */
+
+	DBG_PRINTLN("mounting FS...");
+
+	if (SPIFFS.begin()) {
+		DBG_PRINTLN("mounted file system");
+		if (SPIFFS.exists("/config.json")) {
+			//file exists, reading and loading
+			DBG_PRINTLN("reading config file");
+			File configFile = SPIFFS.open("/config.json", "r");
+			if (configFile) {
+				DBG_PRINTLN("opened config file");
+				size_t size = configFile.size();
+				// Allocate a buffer to store contents of the file.
+				std::unique_ptr<char[]> buf(new char[size]);
+
+				configFile.readBytes(buf.get(), size);
+				DynamicJsonBuffer jsonBuffer;
+				JsonObject& json = jsonBuffer.parseObject(buf.get());
+				json.printTo(Serial);
+				if (json.success()) {
+					DBG_PRINTLN("\nparsed json");
+					if (json["ip"]) {
+						DBG_PRINTLN("setting custom ip from config");
+						//static_ip = json["ip"];
+						strcpy(static_ip, json["ip"]);
+						strcpy(static_gw, json["gateway"]);
+						strcpy(static_sn, json["subnet"]);
+						DBG_PRINTLN(static_ip);
+					}
+					else {
+						DBG_PRINTLN("no custom ip in config");
+					}
+				}
+				else {
+					DBG_PRINTLN("failed to load json config");
+				}
+			}
+		}
+	}
+	else {
+		DBG_PRINTLN("failed to mount FS");
+	}
+	//end read
+
 	WiFiManager wifiManager;
 
 	//wifiManager.setBreakAfterConfig(true);
@@ -205,7 +262,16 @@ void setup() {
 	//and goes into a blocking loop awaiting configuration
 
 	wifiManager.setConfigPortalTimeout(60);
-  
+	wifiManager.setSaveConfigCallback(saveConfigCallback);
+
+	IPAddress _ip, _gw, _sn;
+
+	_ip.fromString(static_ip);
+	_gw.fromString(static_gw);
+	_sn.fromString(static_sn);
+	wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn);
+
+
 	if (!wifiManager.startConfigPortal()) {
 
 		Serial.println("failed to connect, we now enter WPS Mode");
@@ -234,9 +300,32 @@ void setup() {
 
 		Serial.println("local ip");
 		Serial.println(WiFi.localIP());
+
+		if (shouldSaveConfig) {
+			DBG_PRINTLN("saving config");
+			DynamicJsonBuffer jsonBuffer;
+			JsonObject& json = jsonBuffer.createObject();
+
+			json["ip"] = WiFi.localIP().toString();
+			json["gateway"] = WiFi.gatewayIP().toString();
+			json["subnet"] = WiFi.subnetMask().toString();
+
+			File configFile = SPIFFS.open("/config.json", "w");
+			if (!configFile) {
+				DBG_PRINTLN("failed to open config file for writing");
+			}
+
+			json.prettyPrintTo(Serial);
+			json.printTo(configFile);
+			configFile.close();
+			//end save
+		}
+
 	}
 	Server.begin();  // telnet server
 	Server.setNoDelay(true);
+
+
 
 	os_timer_disarm(&cronTimer);
 	os_timer_setfn(&cronTimer, cronjob, NULL);
