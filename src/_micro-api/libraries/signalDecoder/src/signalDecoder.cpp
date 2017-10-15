@@ -349,7 +349,7 @@ void SignalDetectorClass::processMessage()
 					}
 
 					SDC_PRINT(SERIAL_DELIMITER);
-					n = sprintf(buf, ";C%2X;S%2X;R%2;", clock, sync, rssiValue);
+					n = sprintf(buf, ";C%X;S%X;R%X;", clock, sync, rssiValue);
 					SDC_WRITE((const uint8_t *)buf, n);
 				}
 				else {
@@ -569,7 +569,7 @@ void SignalDetectorClass::processMessage()
 						SDC_WRITE(n);
 					}
 
-					n = sprintf(buf, ";C%2X;R%2;", clock, rssiValue);
+					n = sprintf(buf, ";C%X;R%X;", clock, rssiValue);
 					SDC_WRITE((const uint8_t *) buf, n);
 				}
 				else {

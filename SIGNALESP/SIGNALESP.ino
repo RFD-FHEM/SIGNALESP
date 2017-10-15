@@ -34,6 +34,12 @@
   uint8_t writeBuffer[writeBufferSize+1]; // one extra buffer for \n
 
   //#define _USE_WRITE_BUFFER_DEBUG 1
+  //#define _USE_WRITE_BUFFER_STATS
+  
+  #ifdef _USE_WRITE_BUFFER_STATS
+    size_t writeCalls = 0;
+    unsigned long firstWriteCall;
+  #endif  // _USE_WRITE_BUFFER_STATS
 #endif  // _USE_WRITE_BUFFER
 
 
@@ -246,7 +252,6 @@ void setup() {
 	cmdstring.reserve(40);
 
 	//musterDec.setStreamOutput(&serverClient);
-
 }
 
 void ICACHE_RAM_ATTR cronjob(void *pArg) {
@@ -284,6 +289,8 @@ void loop() {
     unsigned char c = Serial.read();
 //    if (c != char(10))
 //      Serial.println(".");
+
+    int8_t rssi;
     switch(c) {
       case 'c':
 #ifdef CMP_CC1101
@@ -297,6 +304,12 @@ void loop() {
       case 'd':
         dumpEEPROM();
         break;
+#ifdef CMP_CC1101
+      case 'r':
+        rssi = cc1101::getRSSI();
+        Serial.printf("rssi: 0x%2X %d\n", (uint8_t)rssi, rssi);
+        break;
+#endif
       case 's':
 #ifndef _DEBUG_DEV_SERIAL_SEND_DELAYED
         MSG_PRINTLN("Test Test Test");
@@ -399,6 +412,11 @@ uint8_t *memchr2(const uint8_t *ptr, uint8_t ch, size_t size) {
 size_t writeCallback(const uint8_t *buf, size_t len)
 {
   size_t res = 0;
+#ifdef _USE_WRITE_BUFFER_STATS
+  if (writeCalls == 0)
+    firstWriteCall = micros();
+  writeCalls++;
+#endif  // _USE_WRITE_BUFFER_STATS
 #ifdef _USE_WRITE_BUFFER
   size_t  remain = len, bufpos = 0, wrote = 0;
 
@@ -412,16 +430,15 @@ size_t writeCallback(const uint8_t *buf, size_t len)
 //    dumpBuffer();
 #endif  // _USE_WRITE_BUFFER_DEBUG
 
-    // MSG_END
-    void *msgEnd;
-    size_t msgEndPos = 0;
-    if ((msgEnd = memchr2(&buf[bufpos], 10, copy)) != NULL) {
-      msgEndPos = (size_t)msgEnd - (size_t)&buf[bufpos];
+    // newline
+    void *newLine;
+    size_t newLinePos = 0;
+    if ((newLine = memchr2(&buf[bufpos], 10, copy)) != NULL) {
+      newLinePos = (size_t)newLine - (size_t)&buf[bufpos];
 #ifdef _USE_WRITE_BUFFER_DEBUG
-      Serial.println("writeCallback: newline @" + String(msgEndPos));
+      Serial.println("writeCallback: newline @" + String(newLinePos));
 #endif  // _USE_WRITE_BUFFER_DEBUG
-      copy = msgEndPos;
-//      writeBuffer[writeBufferCurrent+msgEndPos] = 10;  // additional \n
+      copy = newLinePos;
     }
      
     // copy to buffer
@@ -431,14 +448,13 @@ size_t writeCallback(const uint8_t *buf, size_t len)
     remain -= copy;
     res += copy;
 
-    // MSG_END detected - force send
-    if (msgEndPos > 0)
-      wrote += writeFromBuffer(writeBufferCurrent); // additional \n
+    // newline detected - force send
+    if (newLinePos > 0)
+      wrote += writeFromBuffer(writeBufferCurrent);
 
     // buffer full
     if (writeBufferCurrent == writeBufferSize) {
-//      writeBuffer[writeBufferCurrent] = 10; // additional \n
-      wrote += writeFromBuffer(writeBufferCurrent); // additional \n
+      wrote += writeFromBuffer(writeBufferCurrent);
     }
   }
 #ifdef _USE_WRITE_BUFFER_DEBUG
@@ -456,23 +472,26 @@ size_t writeCallback(const uint8_t *buf, size_t len)
 #ifdef _USE_WRITE_BUFFER
 size_t writeFromBuffer(size_t len) {
   size_t res = 0;
+  unsigned long lastWriteCall;
 
   if (serverClient && serverClient.connected())
     res = serverClient.write(&writeBuffer[0], len);
 
 //  if (res > 0) {
-//    Serial.println("wrote: " + String(res));
 //#ifdef _USE_WRITE_BUFFER_DEBUG
 //    dumpBuffer();
 //#endif  // _USE_WRITE_BUFFER_DEBUG
 //  }
 
-  if (len < writeBufferCurrent) {
-    memcpy(&writeBuffer[0], &writeBuffer[len], writeBufferCurrent - len);
-    writeBufferCurrent -= len;
-  } else {
-      writeBufferCurrent = 0;
+  writeBufferCurrent = 0;
+
+#ifdef _USE_WRITE_BUFFER_STATS
+  if (res > 0) {
+    lastWriteCall = micros();
+    Serial.println("wrote: " + String(res) + " bytes, calls: " + writeCalls + ", elaps: " + String(lastWriteCall - firstWriteCall) + " us");
+    writeCalls = 0;
   }
+#endif  // _USE_WRITE_BUFFER_STATS
   
   return res;
 }

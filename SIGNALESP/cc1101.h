@@ -466,9 +466,8 @@ namespace cc1101 {
 	}
 
   uint8_t getRevision() { return revision; }
-	uint8_t getRSSI()
-	{
-		return readReg((revision == 0x01 ? CC1100_RSSI_REV01 : CC1100_RSSI_REV00), CC1101_STATUS);// Pruefen ob Umwandung von uint to int den richtigen Wert zurueck gibt
+	uint8_t getRSSI() {
+    return readReg((revision == 0x01 ? CC1100_RSSI_REV01 : CC1100_RSSI_REV00), CC1101_STATUS);
 	}
 	
 	inline void setIdleMode()
