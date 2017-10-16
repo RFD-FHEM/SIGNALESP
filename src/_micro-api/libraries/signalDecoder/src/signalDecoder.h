@@ -66,9 +66,9 @@ typedef size_t (*WriteCallback) (const uint8_t *buffer, size_t size);
 #define maxPulse 32001  // Magic Pulse Length
 
 
-#define SERIAL_DELIMITER  char(';')
-#define MSG_START  char(0x2)			// this is a non printable Char
-#define MSG_END  char(0x3)			// this is a non printable Char
+#define SERIAL_DELIMITER  	uint8_t(';')
+#define MSG_START  			uint8_t(0x2)			// this is a non printable Char
+#define MSG_END  			uint8_t(0x3)			// this is a non printable Char
 //#define DEBUGDETECT 1
 //#define DEBUGDETECT 255  // Very verbose output
 //#define DEBUGDECODE 1
@@ -161,6 +161,7 @@ public:
 	size_t write(const uint8_t *buffer, size_t size);
 	size_t write(const char *str);
 	size_t write(uint8_t b);
+	size_t write(int i);
 
 	int8_t findpatt(const int val);              // Finds a pattern in our pattern store. returns -1 if te pattern is not found
 												 //bool validSequence(const int *a, const int *b);     // checks if two pulses are basically valid in terms of on-off signals

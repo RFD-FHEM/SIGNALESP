@@ -226,7 +226,7 @@ void SignalDetectorClass::compress_pattern()
 
 void SignalDetectorClass::processMessage()
 {
-	yield();
+//	yield();
 	
 	char buf[13] = {};
 	uint8_t n = 0;
@@ -495,7 +495,7 @@ void SignalDetectorClass::processMessage()
 					SDC_PRINT(SERIAL_DELIMITER);
 					SDC_PRINT("C="); SDC_PRINT(mcdecoder.clock); SDC_PRINT(SERIAL_DELIMITER);
 					SDC_PRINT("L="); SDC_PRINT(mcdecoder.ManchesterBits.valcount); SDC_PRINT(SERIAL_DELIMITER);
-					SDC_PRINT("R=");  SDC_PRINT(rssiValue); SDC_PRINT(SERIAL_DELIMITER);     // Signal Level (RSSI)
+					SDC_PRINT("R=");  SDC_PRINT((int)rssiValue); SDC_PRINT(SERIAL_DELIMITER);     // Signal Level (RSSI)
 					SDC_PRINT(MSG_END);
 					SDC_PRINT("\n");
 
@@ -718,6 +718,10 @@ size_t SignalDetectorClass::write(const char *str) {
 size_t SignalDetectorClass::write(uint8_t b)
 {
 	return write(&b, 1);
+}
+
+size_t SignalDetectorClass::write(int i) {
+	return write(String(i).c_str());
 }
 
 int8_t SignalDetectorClass::findpatt(const int val)
@@ -1032,21 +1036,21 @@ void ManchesterpatternDecoder::getMessageHexStr(String *message)
 */
 void ManchesterpatternDecoder::printMessageHexStr()
 {
-	char hexStr[] = "00"; // Not really needed
+	char hexStr[2];	// = "00"; // Not really needed
 
 	char cbuffer[256];
 	uint8_t idx;
 	for (idx = 0; idx <= ManchesterBits.bytecount - 1; ++idx) {
-		//sprintf(cbuffer +(idx*2), "%02X", getMCByte(idx));
-		//SDC_PRINT(hexStr);
+		sprintf(hexStr, "%02X", getMCByte(idx));
+		pdec->write(hexStr);
 	}
 
-	//sprintf(cbuffer + (idx * 2), "%01X", getMCByte(idx) >> 4 & 0xf);
-	//SDC_PRINT(hexStr);
+	sprintf(hexStr, "%01X", getMCByte(idx) >> 4 & 0xf);
+	pdec->write(hexStr);
 	if (ManchesterBits.valcount % 8 > 4 || ManchesterBits.valcount % 8 == 0)
 	{
-		//sprintf(cbuffer + (idx*2)+1, "%01X", getMCByte(idx) & 0xF);
-		//SDC_PRINT(hexStr);
+		sprintf(hexStr, "%01X", getMCByte(idx) & 0xF);
+		pdec->write(hexStr);
 	}
 	//pdec->msgPort->print(cbuffer);
 }
