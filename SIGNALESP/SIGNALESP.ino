@@ -474,10 +474,8 @@ size_t writeFromBuffer(size_t len) {
   size_t res = 0;
   unsigned long lastWriteCall;
 
-  if (serverClient && serverClient.connected()) {
+  if (serverClient && serverClient.connected())
     res = serverClient.write(&writeBuffer[0], len);
-    Serial.write(&writeBuffer[0], len);
-  }
 
 //  if (res > 0) {
 //#ifdef _USE_WRITE_BUFFER_DEBUG

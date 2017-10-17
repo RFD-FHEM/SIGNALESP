@@ -325,7 +325,7 @@ void SignalDetectorClass::processMessage()
 						}
 						SDC_WRITE(patternIdx);
 						SDC_WRITE(patternLow);
-						SDC_WRITE(highByte(patternInt) | B10000000);
+						SDC_WRITE((uint8_t)(highByte(patternInt) | B10000000));
 						SDC_PRINT(SERIAL_DELIMITER);
 					}
 
@@ -551,7 +551,7 @@ void SignalDetectorClass::processMessage()
 						}
 						SDC_WRITE(patternIdx);
 						SDC_WRITE(patternLow);
-						SDC_WRITE(highByte(patternInt) | B10000000);
+						SDC_WRITE((uint8_t)(highByte(patternInt) | B10000000));
 						SDC_PRINT(SERIAL_DELIMITER);
 					}
 
