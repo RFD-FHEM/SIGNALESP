@@ -692,6 +692,7 @@ void send_cmd()
 					printHex2(val);
 				}
 				MSG_PRINTLN("");
+		  }
 		}
 	}
 
