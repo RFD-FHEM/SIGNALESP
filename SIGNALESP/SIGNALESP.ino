@@ -672,6 +672,7 @@ void send_cmd()
 			//sendclock = msg_part.substring(2).toInt();
 			command[cmdNo].sendclock = msg_part.substring(2).toInt();
 			//MSG_PRINTLN("adding sendclock");
+#ifdef CMP_CC1101
 		} else if(msg_part.charAt(0) == 'F' && msg_part.charAt(1) == '=')
 		{
 			ccParamAnz = msg_part.length() / 2 - 1;
@@ -692,7 +693,8 @@ void send_cmd()
 				MSG_PRINTLN("");
 		  }
 		}
-	}
+#endif  // CMP_CC1101
+  }
 
 #ifdef CMP_CC1101
   if (hasCC1101)
@@ -710,6 +712,7 @@ void send_cmd()
 		if (extraDelay) delay(1);
 	}
 
+#ifdef CMP_CC1101
 	if (ccParamAnz > 0) {
 		MSG_PRINT("ccreg write back ");
 		for (uint8_t i=0;i<ccParamAnz;i++)
@@ -720,6 +723,7 @@ void send_cmd()
 		}
 		MSG_PRINTLN("");
 	}
+#endif  // CMP_CC1101
 		
 	enableReceive();	// enable the receiver
 	MSG_PRINTLN(cmdstring); // echo
