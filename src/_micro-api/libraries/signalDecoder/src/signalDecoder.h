@@ -32,9 +32,9 @@
 #define _SIGNALDECODER_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
-#include "Arduino.h"
+	#include "Arduino.h"
 #else
-#include "WProgram.h"
+	#include "WProgram.h"
 #endif
 #define DEBUG 1
 
@@ -54,7 +54,6 @@ extern WiFiClient serverClient;
 
 #include <bitstore.h>
 #include <FastDelegate.h>
-
 #define maxNumPattern 8
 #define maxMsgSize 254
 #define minMessageLen 40
@@ -80,11 +79,11 @@ class SignalDetectorClass
 	friend class ManchesterpatternDecoder;
 
 public:
-	SignalDetectorClass() : first(buffer), last(first + 1), message(4) {
-		buffer[0] = 0; reset(); mcMinBitLen = 17;
-		MsMoveCount = 0;
-		MredEnabled = 1;      // 1 = compress printmsg 
-	};
+	SignalDetectorClass() : first(buffer), last(first + 1), message(4) { 
+																		 buffer[0] = 0; reset(); mcMinBitLen = 17; 	
+																		 MsMoveCount = 0; 
+																		 MredEnabled = 1;      // 1 = compress printmsg 
+																	   };
 
 	void reset();
 	bool decode(const int* pulse);
@@ -103,10 +102,10 @@ public:
 	bool MSenabled;
 	bool MredEnabled;                       // 1 = compress printMsgRaw
 	uint8_t MsMoveCount;
-
+	
 	uint8_t histo[maxNumPattern];
 	//uint8_t message[maxMsgSize];
-	BitStore<maxMsgSize / 2> message;       // A store using 4 bit for every value stored. 
+	BitStore<maxMsgSize/2> message;       // A store using 4 bit for every value stored. 
 
 	uint8_t messageLen;					  // Todo, kann durch message.valcount ersetzt werden
 	uint8_t mstart;						  // Holds starting point for message
@@ -137,7 +136,7 @@ public:
 	Stream *msgPort;						// Holds a pointer to a stream object for outputting
 
 
-	void addData(const uint8_t value);
+	void addData(const int8_t value);
 	void addPattern();
 	inline void updPattern(const uint8_t ppos);
 
@@ -158,6 +157,7 @@ public:
 
 	int8_t findpatt(const int val);              // Finds a pattern in our pattern store. returns -1 if te pattern is not found
 												 //bool validSequence(const int *a, const int *b);     // checks if two pulses are basically valid in terms of on-off signals
+	bool checkMBuffer();
 
 
 };
