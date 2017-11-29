@@ -38,18 +38,20 @@
 #endif
 #define DEBUG 1
 
-//#define ETHERNET_PRINT  // Quick hack to enable ethernet output in signalDecoder Lib
-//#include <output.h>
-#include <ESP8266WiFi.h>
 
+#ifndef WIFI_ESP
+#include <output.h>
+#else
+#include <ESP8266WiFi.h>
 extern WiFiClient serverClient;
 #define DBG_PRINTER Serial
-
-#define SDC_PRINT(...) {  write(__VA_ARGS__); }
-#define SDC_PRINTLN(...) {  write(__VA_ARGS__); write("\n"); }
-#define SDC_WRITE(...) {  write(__VA_ARGS__); }
 #define DBG_PRINT(...) { DBG_PRINTER.print(__VA_ARGS__); }
 #define DBG_PRINTLN(...) { DBG_PRINTER.println(__VA_ARGS__); }
+#endif
+
+#define SDC_PRINT(...) {  write(__VA_ARGS__); }
+#define SDC_WRITE(...) {  write(__VA_ARGS__); }
+#define SDC_PRINTLN(...) {  write(__VA_ARGS__); write("\n"); }
 
 
 #include <bitstore.h>
@@ -64,8 +66,8 @@ extern WiFiClient serverClient;
 
 
 #define SERIAL_DELIMITER  char(';')
-#define MSG_START  char(0x2)			// this is a non printable Char
-#define MSG_END  char(0x3)			// this is a non printable Char
+#define MSG_START char(0x2)		// this is a non printable Char
+#define MSG_END   char(0x3)			// this is a non printable Char
 //#define DEBUGDETECT 1
 //#define DEBUGDETECT 255  // Very verbose output
 //#define DEBUGDECODE 1
