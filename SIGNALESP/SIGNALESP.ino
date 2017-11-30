@@ -424,15 +424,63 @@ void disableReceive() {
 
 
 //============================== Write callback =========================================
+
+#define _USE_WRITE_BUFFER
+
+#ifdef _USE_WRITE_BUFFER
+const size_t writeBufferSize = 128;
+size_t writeBufferCurrent = 0;
+uint8_t writeBuffer[writeBufferSize]; 
+#endif;
 size_t writeCallback(const uint8_t *buf, uint8_t len=1)
 {
-	while (!serverClient.available())
-		yield();
+#ifdef _USE_WRITE_BUFFER
+	if (!serverClient || !serverClient.connected())
+		return 0;
+
+	size_t result = 0;
+
+	while (len > 0) {
+		size_t copy = (len > writeBufferSize - writeBufferCurrent ? writeBufferSize - writeBufferCurrent : len);
+		if (copy > 0)
+		{
+			memcpy(writeBuffer + writeBufferCurrent, buf, copy);
+			writeBufferCurrent = writeBufferCurrent + copy;
+		}
+		// Buffer full or \n detected - force send
+		if ( (len == 1 && *buf == char(0xA)) || (writeBufferCurrent == writeBufferSize))
+		{
+			size_t byteswritten = 0;
+			if (serverClient && serverClient.connected())
+				byteswritten=serverClient.write((const uint8_t*)writeBuffer, writeBufferCurrent);
+				//byteswritten = serverClient.write(&writeBuffer[0], writeBufferCurrent);
+
+			if (byteswritten < writeBufferCurrent) {
+				memmove(writeBuffer, writeBuffer+byteswritten, writeBufferCurrent - byteswritten);
+				writeBufferCurrent -= byteswritten;
+			} else {
+				writeBufferCurrent = 0;
+			}
+			result += byteswritten;
+		}
+		len = len - copy;
+
+		// buffer full
+	}
+	return len;
+#else
+
+	while (!serverClient.available()) {
+		yield(); 
+		if (!serverClient.connected()) return 0;
+	}
 	DBG_PRINTLN("Called writeCallback");
+
+	memccpy()
 
 	return serverClient.write(buf, len);
 	//serverClient.write("test");
-
+#endif
 }
 
 
