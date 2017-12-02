@@ -369,7 +369,7 @@ void setup() {
 	if (!hasCC1101 || cc1101::regCheck()) {
 #endif
 	
-	musterDec.setStreamCallback(writeCallback);
+	musterDec.registerWriteCallback(writeCallback);
 	enableReceive();
     DBG_PRINTLN(F("receiver enabled"));
 #ifdef CMP_CC1101
