@@ -32,31 +32,31 @@
 #define _SIGNALDECODER_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
-#include "Arduino.h"
+	#include "Arduino.h"
 #else
-#include "WProgram.h"
+	#include "WProgram.h"
 #endif
 #define DEBUG 1
 
-//#define ETHERNET_PRINT  // Quick hack to enable ethernet output in signalDecoder Lib
-//#include <output.h>
-//#include <ESP8266WiFi.h>
-
-//extern WiFiClient serverClient;
-#define DBG_PRINTER Serial
-
 typedef size_t (*WriteCallback) (const uint8_t *buffer, size_t size);
 
-#define SDC_PRINT(...) { write(__VA_ARGS__); }
-#define SDC_PRINTLN(...) { write(__VA_ARGS__); write("\n"); }
-#define SDC_WRITE(...) { write(__VA_ARGS__); }
-#define DBG_PRINT(...) { DBG_PRINTER.print(__VA_ARGS__); }
-#define DBG_PRINTLN(...) { DBG_PRINTER.println(__VA_ARGS__); }
+#ifndef WIFI_ESP
+  #include <output.h>
+#else
+  #include <ESP8266WiFi.h>
+  extern WiFiClient serverClient;
+  #define DBG_PRINTER Serial
+  #define DBG_PRINT(...) { DBG_PRINTER.print(__VA_ARGS__); }
+  #define DBG_PRINTLN(...) { DBG_PRINTER.println(__VA_ARGS__); }
+#endif
+
+#define SDC_PRINT(...) {  write(__VA_ARGS__); }
+#define SDC_WRITE(...) {  write(__VA_ARGS__); }
+#define SDC_PRINTLN(...) {  write(__VA_ARGS__); write("\n"); }
 
 
 #include <bitstore.h>
 #include <FastDelegate.h>
-
 #define maxNumPattern 8
 #define maxMsgSize 254
 #define minMessageLen 40
@@ -87,11 +87,11 @@ public:
 		writeCallback = callback;
 	};
 
-	SignalDetectorClass() : first(buffer), last(first + 1), message(4) {
-		buffer[0] = 0; reset(); mcMinBitLen = 17;
-		MsMoveCount = 0;
-		MredEnabled = 1;      // 1 = compress printmsg 
-	};
+	SignalDetectorClass() : first(buffer), last(first + 1), message(4) { 
+																		 buffer[0] = 0; reset(); mcMinBitLen = 17; 	
+																		 MsMoveCount = 0; 
+																		 MredEnabled = 1;      // 1 = compress printmsg 
+																	   };
 
 	void reset();
 	bool decode(const int* pulse);
@@ -110,10 +110,10 @@ public:
 	bool MSenabled;
 	bool MredEnabled;                       // 1 = compress printMsgRaw
 	uint8_t MsMoveCount;
-
+	
 	uint8_t histo[maxNumPattern];
 	//uint8_t message[maxMsgSize];
-	BitStore<maxMsgSize / 2> message;       // A store using 4 bit for every value stored. 
+	BitStore<maxMsgSize/2> message;       // A store using 4 bit for every value stored. 
 
 	uint8_t messageLen;					  // Todo, kann durch message.valcount ersetzt werden
 	uint8_t mstart;						  // Holds starting point for message
@@ -139,11 +139,11 @@ public:
 	bool mcDetected;						// MC Signal alread detected flag
 	uint8_t mcMinBitLen;					// min bit Length
 	uint8_t rssiValue;						// Holds the RSSI value retrieved via a rssi callback
-	FuncRetuint8t _rssiCallback;			// Holds the pointer to a callback Function
+	FuncRetuint8t _rssiCallback=NULL;		// Holds the pointer to a callback Function
 //	Func2pRetuint8t _streamCallback;		// Holds the pointer to a callback Function
 //	Stream *msgPort;						// Holds a pointer to a stream object for outputting
 
-	void addData(const uint8_t value);
+	void addData(const int8_t value);
 	void addPattern();
 	inline void updPattern(const uint8_t ppos);
 
@@ -153,8 +153,8 @@ public:
 	void calcHisto(const uint8_t startpos = 0, uint8_t endpos = 0);
 	bool getClock(); // Searches a clock in a given signal
 	bool getSync();	 // Searches clock and sync in given Signal
-	int8_t printMsgRaw(uint8_t m_start, const uint8_t m_end, const String *preamble = NULL, const String *postamble = NULL);
-	void printMsgStr(const String *first, const String *second, const String *third);
+	//int8_t printMsgRaw(uint8_t m_start, const uint8_t m_end, const String *preamble = NULL, const String *postamble = NULL);
+	//void printMsgStr(const String *first, const String *second, const String *third);
 	const bool inTol(const int val, const int set, const int tolerance); // checks if a value is in tolerance range
 
 	void printOut();
@@ -165,6 +165,7 @@ public:
 
 	int8_t findpatt(const int val);              // Finds a pattern in our pattern store. returns -1 if te pattern is not found
 												 //bool validSequence(const int *a, const int *b);     // checks if two pulses are basically valid in terms of on-off signals
+	bool checkMBuffer();
 };
 
 class ManchesterpatternDecoder

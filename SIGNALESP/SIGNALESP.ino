@@ -44,11 +44,13 @@
 
 
 #define ETHERNET_PRINT
+#include <FS.h>   
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
 #include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
+#include <ArduinoJson.h>
 
 WiFiServer Server(23);  //  port 23 = telnet
 WiFiClient serverClient;
@@ -114,11 +116,19 @@ void getFunctions(bool *ms, bool *mu, bool *mc);
 uint8_t rssiCallback() { return 0; }; // Dummy return if no rssi value can be retrieved from receiver
 //uint16_t writeCallback(const uint8_t *buf,uint8_t len);
 
+//default custom static IP
+char static_ip[16] = "10.22.0.200";
+char static_gw[16] = "0.0.0.0";
+char static_sn[16] = "255.255.255.0";
 
 bool startWPS() {
 	// from https://gist.github.com/copa2/fcc718c6549721c210d614a325271389
 	// wpstest.ino
 	Serial.println("WPS config start");
+	WiFi.disconnect();
+	WiFi.mode(WIFI_STA); // WPS only works in station mode
+	
+	delay(1000);
 	bool wpsSuccess = WiFi.beginWPSConfig();
 	if (wpsSuccess) {
 		// Well this means not always success :-/ in case of a timeout we have an empty ssid
@@ -135,7 +145,14 @@ bool startWPS() {
 }
 
 
+//flag for saving data
+bool shouldSaveConfig = false;
 
+//callback notifying us of the need to save config
+void saveConfigCallback() {
+	DBG_PRINTLN("Should save config");
+	shouldSaveConfig = true;
+}
 
 void setup() {
 	//ESP.wdtEnable(2000);
@@ -168,22 +185,27 @@ void setup() {
   }
 #endif  
 
+/*
   #ifdef DEBUG
     Serial.printf("\nTry connecting to WiFi with SSID '%s'\n", WiFi.SSID().c_str());
   #endif
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // reading data from EPROM, 
-  while (WiFi.status() == WL_DISCONNECTED) {          // last saved credentials
-	  delay(500);
-	  Serial.print(".");
-  }
+
+	if (WiFi.SSID().length() > 0 )
+	{
+
+		WiFi.mode(WIFI_STA);
+		WiFi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // reading data from EPROM, 
+		while (WiFi.status() == WL_DISCONNECTED) {          // last saved credentials
+			delay(500);
+			Serial.print(".");
+		}
+	}
   wl_status_t status = WiFi.status();
   if (status == WL_CONNECTED) {
   #ifdef DEBUG 
 	   Serial.printf("\nConnected successful to SSID '%s'\n", WiFi.SSID().c_str());
   #endif
-  }
-  else {
+  }  else {
 	Serial.printf("\nCould not connect to WiFi. state='%d'\n", status);
 	Serial.println("Please press WPS button on your router");
 	delay(5000);
@@ -196,20 +218,65 @@ void setup() {
 		while (WiFi.status() == WL_DISCONNECTED) {          // last saved credentials
 			delay(500);
 			Serial.print("."); // show wait for connect to AP
+				
+		}
+		#ifdef DEBUG
+		Serial.print("\nReady! Use 'telnet ");
+		Serial.print(WiFi.localIP());
+		Serial.println(" port 23' to connect");
+		#endif
+
 	}
 
 
   }
+ */
 
-  #ifdef DEBUG
-		Serial.print("\nReady! Use 'telnet ");
-	  Serial.print(WiFi.localIP());
-	  Serial.println(" port 23' to connect");
-  #endif
-  }
+	DBG_PRINTLN("mounting FS...");
 
-  WiFiManager wifiManager;
-//  wifiManager.setBreakAfterConfig(true);
+	if (SPIFFS.begin()) {
+		DBG_PRINTLN("mounted file system");
+		if (SPIFFS.exists("/config.json")) {
+			//file exists, reading and loading
+			DBG_PRINTLN("reading config file");
+			File configFile = SPIFFS.open("/config.json", "r");
+			if (configFile) {
+				DBG_PRINTLN("opened config file");
+				size_t size = configFile.size();
+				// Allocate a buffer to store contents of the file.
+				std::unique_ptr<char[]> buf(new char[size]);
+
+				configFile.readBytes(buf.get(), size);
+				DynamicJsonBuffer jsonBuffer;
+				JsonObject& json = jsonBuffer.parseObject(buf.get());
+				json.printTo(Serial);
+				if (json.success()) {
+					DBG_PRINTLN("\nparsed json");
+					if (json["ip"]) {
+						DBG_PRINTLN("setting custom ip from config");
+						//static_ip = json["ip"];
+						strcpy(static_ip, json["ip"]);
+						strcpy(static_gw, json["gateway"]);
+						strcpy(static_sn, json["subnet"]);
+						DBG_PRINTLN(static_ip);
+					}
+					else {
+						DBG_PRINTLN("no custom ip in config");
+					}
+				}
+				else {
+					DBG_PRINTLN("failed to load json config");
+				}
+			}
+		}
+	}
+	else {
+		DBG_PRINTLN("failed to mount FS");
+	}
+	//end read
+
+	WiFiManager wifiManager;
+  //  wifiManager.setBreakAfterConfig(true);
   //reset settings - for testing
   //wifiManager.resetSettings();
 
@@ -217,22 +284,82 @@ void setup() {
   //if it does not connect it starts an access point with the specified name
   //here  "NodeDuino" with no password
   //and goes into a blocking loop awaiting configuration
+/*
+  // old wifi crap
   if (!wifiManager.autoConnect("NodeDuino")) {
     Serial.println("failed to connect, we should reset as see if it connects");
     delay(3000);
     ESP.reset();
     delay(5000);
   }
+*/
+  // new wifi crap
+  wifiManager.setConfigPortalTimeout(60);
+	wifiManager.setSaveConfigCallback(saveConfigCallback);
 
-  //if you get here you have connected to the WiFi
-  Serial.println("connected...)");
+	IPAddress _ip, _gw, _sn;
+
+	_ip.fromString(static_ip);
+	_gw.fromString(static_gw);
+	_sn.fromString(static_sn);
+	wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn);
+  // end wifi crap
 
 
-  Serial.println("local ip");
-  Serial.println(WiFi.localIP());
+	if (!wifiManager.startConfigPortal()) {
 
+		Serial.println("failed to connect, we now enter WPS Mode");
+		delay(3000);
+
+
+			Serial.printf("\nCould not connect to WiFi. state='%d'\n", WiFi.status());
+			Serial.println("Please press WPS button on your router");
+			delay(5000);
+			if (!startWPS()) {
+				Serial.println("Failed to connect with WPS, will restart ESP now :-(");
+				delay(3500);
+				while (1);
+				//ESP.restart();
+				//ESP.reset();
+			}
+
+		delay(5000);
+	}
+
+	if (WiFi.status() == WL_CONNECTED) {          // last saved credentials
+
+	  //if you get here you have connected to the WiFi
+		Serial.println("connected...)");
+
+
+		Serial.println("local ip");
+		Serial.println(WiFi.localIP());
+
+		if (shouldSaveConfig) {
+			DBG_PRINTLN("saving config");
+			DynamicJsonBuffer jsonBuffer;
+			JsonObject& json = jsonBuffer.createObject();
+
+			json["ip"] = WiFi.localIP().toString();
+			json["gateway"] = WiFi.gatewayIP().toString();
+			json["subnet"] = WiFi.subnetMask().toString();
+
+			File configFile = SPIFFS.open("/config.json", "w");
+			if (!configFile) {
+				DBG_PRINTLN("failed to open config file for writing");
+			}
+
+			json.prettyPrintTo(Serial);
+			json.printTo(configFile);
+			configFile.close();
+			//end save
+		}
+
+	}
 	Server.begin();  // telnet server
 	Server.setNoDelay(true);
+
+
 
 	os_timer_disarm(&cronTimer);
 	os_timer_setfn(&cronTimer, cronjob, NULL);
@@ -241,6 +368,8 @@ void setup() {
 #ifdef CMP_CC1101
 	if (!hasCC1101 || cc1101::regCheck()) {
 #endif
+	
+	musterDec.setStreamCallback(writeCallback);
 	enableReceive();
     DBG_PRINTLN(F("receiver enabled"));
 #ifdef CMP_CC1101
@@ -251,7 +380,6 @@ void setup() {
 
 	cmdstring.reserve(40);
 
-	//musterDec.setStreamOutput(&serverClient);
 }
 
 void ICACHE_RAM_ATTR cronjob(void *pArg) {
