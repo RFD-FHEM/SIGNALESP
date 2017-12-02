@@ -368,7 +368,6 @@ void setup() {
 	if (!hasCC1101 || cc1101::regCheck()) {
 #endif
 	
-	musterDec.registerWriteCallback(writeCallback);
 	enableReceive();
     DBG_PRINTLN(F("receiver enabled"));
 #ifdef CMP_CC1101

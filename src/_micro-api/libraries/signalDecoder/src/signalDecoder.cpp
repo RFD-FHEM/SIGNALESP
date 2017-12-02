@@ -712,6 +712,7 @@ void SignalDetectorClass::processMessage()
 					}
 					//String postamble;
 					/*
+					SDC_PRINT(SERIAL_DELIMITER);
 					SDC_PRINT("CP="); SDC_PRINT(clock);     SDC_PRINT(SERIAL_DELIMITER);    // ClockPulse, (not valid for manchester)
 					SDC_PRINT("R=");  SDC_PRINT(rssiValue); SDC_PRINT(SERIAL_DELIMITER);     // Signal Level (RSSI)
 					*/
