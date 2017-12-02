@@ -331,8 +331,7 @@ void setup() {
 	  //if you get here you have connected to the WiFi
 		Serial.println("connected...)");
 
-
-		Serial.println("local ip");
+		Serial.print("local ip: ");
 		Serial.println(WiFi.localIP());
 
 		if (shouldSaveConfig) {
@@ -968,6 +967,7 @@ void HandleCommand()
 		}
 		else if (cmdstring.charAt(1) == 'E' || cmdstring.charAt(1) == 'D') {  //Todo:  E und D sind auch hexadezimal, werden hier aber abgefangen
 			configCMD();
+      EEPROM.commit();
 		}
 		else if (cmdstring.charAt(1) == 'S') {
 			configSET();

@@ -448,7 +448,7 @@ void SignalDetectorClass::processMessage()
 					n = sprintf(buf, ";C%X;S%X;R%X;", clock, sync, rssiValue);
 					SDC_WRITE((const uint8_t *)buf, n);
 					*/
-        }
+				}
 				else {
 					SDC_PRINT("MS");  SDC_PRINT(SERIAL_DELIMITER);		
 					for (uint8_t idx = 0; idx < patternLen; idx++)
@@ -494,7 +494,7 @@ void SignalDetectorClass::processMessage()
 				}
 				
 				SDC_WRITE(MSG_END);
-				SDC_WRITE(char(0xA));
+				SDC_WRITE("\n");
 				
 				success = true;
 
@@ -617,7 +617,7 @@ void SignalDetectorClass::processMessage()
   					SDC_PRINT("R=");  SDC_PRINT(rssiValue); SDC_PRINT(SERIAL_DELIMITER);     // Signal Level (RSSI)
 					*/
 					SDC_WRITE(MSG_END);
-					SDC_WRITE(char(0xA));
+					SDC_WRITE("\n");
 
 #ifdef DEBUGDECODE
 					DBG_PRINTLN("");
@@ -723,7 +723,7 @@ void SignalDetectorClass::processMessage()
 					SDC_PRINT("O");  SDC_PRINT(SERIAL_DELIMITER);
 				}
 				SDC_WRITE(MSG_END);  				
-				SDC_WRITE(char(0xA));
+				SDC_WRITE("\n");
 
 				
 				m_truncated = false;
