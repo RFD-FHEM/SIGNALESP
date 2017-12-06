@@ -932,7 +932,7 @@ void SignalDetectorClass::calcHisto(const uint8_t startpos, uint8_t endpos)
 	uint16_t bstartpos = startpos *4/8;
 	uint16_t bendpos = endpos*4 / 8;
 	uint8_t bval;
-	if (startpos % 2 == 1)  // ungerade
+	if ((startpos & 0x01) == 1)  // ungerade
 	{
 		message.getByte(bstartpos, &bval);
 		histo[bval & B00001111]++;
@@ -944,7 +944,7 @@ void SignalDetectorClass::calcHisto(const uint8_t startpos, uint8_t endpos)
 		histo[bval >> 4]++;
 		histo[bval & B00001111]++;
 	}
-	if (endpos % 2 == 1)
+	if ((endpos & 0x01) == 1)
 	{
 		message.getByte(bendpos, &bval);
 		histo[bval >> 4]++;
@@ -1468,7 +1468,7 @@ const bool ManchesterpatternDecoder::doDecode() {
 				//lastbit = ~lastbit;  //TODO: Pruefen ob negiert korrekt ist.
 
 				uint8_t z = i - pdec->mstart;
-				if ((z < 1) or ((z % 2) == 0))
+				if ((z < 1) or ((z & 0x01) == 0))
 					i = pdec->mstart;
 				else
 					i = pdec->mstart + 1;
@@ -1923,7 +1923,7 @@ const bool ManchesterpatternDecoder::isManchester()
 					if (seq < 10) seq += 100;
 					
 					int8_t *seqptr;
-					if (z % 2 == 0)  //Every even value
+					if ((z & 0x01) == 0)  //Every even value
 						seqptr = sequence_even;
 					else
 						seqptr = sequence_odd;
