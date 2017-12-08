@@ -64,3 +64,4 @@ First, sorry. This software is not perfect.
 7. Open a Pull Request, put some useful informations there, what your extension does and why we should add it, reference to the open issues which are fixed whith this pull requet.
 
 
+
