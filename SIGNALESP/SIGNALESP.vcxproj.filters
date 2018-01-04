@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="SIGNALESP.ino" />
+    <None Include="ClassDiagram.cd" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="__vm\.SIGNALESP.vsarduino.h">
