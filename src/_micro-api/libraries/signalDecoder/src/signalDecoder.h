@@ -36,7 +36,7 @@
 #else
 	#include "WProgram.h"
 #endif
-#define DEBUG 1
+//#define DEBUG 1
 
 typedef size_t (*WriteCallback) (const uint8_t *buffer, size_t size);
 
