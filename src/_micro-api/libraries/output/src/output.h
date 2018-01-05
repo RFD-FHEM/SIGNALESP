@@ -57,7 +57,7 @@
 #endif
 
 #ifdef ETHERNET_PRINT
-#include <wificlient.h>
+#include <WiFiClient.h>
 
 extern WiFiClient serverClient;
 
