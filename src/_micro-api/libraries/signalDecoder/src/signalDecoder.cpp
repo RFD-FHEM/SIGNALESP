@@ -1028,7 +1028,7 @@ bool SignalDetectorClass::getSync()
 				// Pruefen ob der gefundene Sync auch als message [clock, p] vorkommt
 				uint8_t c = 0;
 				
-				while (c < min(syncLenMax,messageLen - minMessageLen))
+				while (c < sd_min(syncLenMax,messageLen - minMessageLen))
 				{
 					if (message[c + 1] == p && message[c] == clock) break;
 					c++;
