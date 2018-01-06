@@ -1,7 +1,7 @@
 
 
 #define PROGNAME               "RF_RECEIVER-ESP"
-#define PROGVERS               "3.3.1-dev"
+#define PROGVERS               "3.3.1-rc2"
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
 
@@ -420,6 +420,7 @@ void disableReceive() {
     if (hasCC1101)
       cc1101::setIdleMode();
   #endif
+	FiFo.flush();
 }
 
 
@@ -567,12 +568,14 @@ bool split_cmdpart(int16_t *startpos, String *msg_part)
 // SR;R=10;P0=-2000;P1=-1000;P2=500;P3=-6000;D=2020202021212020202121212021202021202121212023;
 
 struct s_sendcmd {
-	int16_t sendclock;
+	int16_t sendclock = 0;
 	uint8_t type;
-	uint8_t datastart;
-	uint16_t dataend;
+	uint8_t datastart = 0;
+	uint16_t dataend = 0;
 	int16_t buckets[6];
+	uint8_t repeats = 1;
 };
+
 
 void send_cmd()
 {
@@ -592,6 +595,10 @@ void send_cmd()
 
 	s_sendcmd command[5];
 
+	uint8_t ccParamAnz = 0;   // Anzahl der per F= uebergebenen cc1101 Register
+	uint8_t ccReg[4];
+	uint8_t val;
+
 	disableReceive();
 
 	uint8_t cmdNo = 255;
@@ -599,30 +606,35 @@ void send_cmd()
 
 	while (split_cmdpart(&start_pos, &msg_part))
 	{
-		//MSG_PRINTLN(msg_part);
+		DBG_PRINTLN(msg_part);
 		if (msg_part.charAt(0) == 'S')
 		{
 			if (msg_part.charAt(1) == 'C')  // send combined informatio flag
 			{
 				//type=combined;
 				//cmdNo=255;
+				cmdNo++;
+				//command[cmdNo].repeats = 0;
+				command[cmdNo].type = combined;
 				extraDelay = false;
 			}
 			else if (msg_part.charAt(1) == 'M') // send manchester
 			{
 				//type=manchester;
 				cmdNo++;
+				//command[cmdNo].repeats = 0;
 				command[cmdNo].type = manchester;
-				//MSG_PRINTLN("Adding manchester");
+				DBG_PRINTLN("Adding manchester");
+
 			}
 			else if (msg_part.charAt(1) == 'R') // send raw
 			{
 				//type=raw;
 				cmdNo++;
+				//command[cmdNo].repeats = 0;
 				command[cmdNo].type = raw;
-				//MSG_PRINTLN("Adding raw");
+				DBG_PRINTLN("Adding raw");
 				extraDelay = false;
-
 			}
 		}
 		else if (msg_part.charAt(0) == 'P' && msg_part.charAt(2) == '=') // Do some basic detection if data matches what we expect
@@ -630,21 +642,22 @@ void send_cmd()
 			counter = msg_part.substring(1, 2).toInt(); // extract the pattern number
 														//buckets[counter]=  msg_part.substring(3).toInt();
 			command[cmdNo].buckets[counter] = msg_part.substring(3).toInt();
-			//MSG_PRINTLN("Adding bucket");
+			DBG_PRINTLN("Adding bucket");
 
 		}
 		else if (msg_part.charAt(0) == 'R' && msg_part.charAt(1) == '=') {
-			repeats = msg_part.substring(2).toInt();
-			//MSG_PRINTLN("Adding repeats");
+			command[cmdNo].repeats = msg_part.substring(2).toInt();
+			DBG_PRINT("Adding repeats: "); DBG_PRINTLN(command[cmdNo].repeats);
+
 
 		}
 		else if (msg_part.charAt(0) == 'D') {
 			command[cmdNo].datastart = start_pos - msg_part.length() + 1;
 			command[cmdNo].dataend = start_pos - 2;
-			//MSG_PRINT("locating data start:");
-			// MSG_PRINT(command[cmdNo].datastart);
-			//MSG_PRINT(" end:");
-			//MSG_PRINTLN(command[cmdNo].dataend);
+			DBG_PRINT("locating data start:");
+			DBG_PRINT(command[cmdNo].datastart);
+			DBG_PRINT(" end:");
+			DBG_PRINTLN(command[cmdNo].dataend);
 			//if (type==raw) send_raw(&msg_part,buckets);
 			//if (type==manchester) send_mc(&msg_part,sendclock);
 			//digitalWrite(PIN_SEND, LOW); // turn off transmitter
@@ -654,29 +667,76 @@ void send_cmd()
 		{
 			//sendclock = msg_part.substring(2).toInt();
 			command[cmdNo].sendclock = msg_part.substring(2).toInt();
-			//MSG_PRINTLN("adding sendclock");
-		}
+			DBG_PRINTLN("adding sendclock");
 	}
+#ifdef CMP_CC1101
+		else if (msg_part.charAt(0) == 'F' && msg_part.charAt(1) == '=')
+		{
+			ccParamAnz = msg_part.length() / 2 - 1;
+
+			if (ccParamAnz > 0 && ccParamAnz <= 5 && hasCC1101) {
+				uint8_t hex;
+				DBG_PRINTLN("write new ccreg  ");
+				for (uint8_t i = 0; i<ccParamAnz; i++)
+				{
+					ccReg[i] = cc1101::readReg(0x0d + i, 0x80);    // alte Registerwerte merken
+					hex = (uint8_t)msg_part.charAt(2 + i * 2);
+					val = cc1101::hex2int(hex) * 16;
+					hex = (uint8_t)msg_part.charAt(3 + i * 2);
+					val = cc1101::hex2int(hex) + val;
+					cc1101::writeReg(0x0d + i, val);            // neue Registerwerte schreiben
+					printHex2(val);
+				}
+				DBG_PRINTLN("");
+			}
+		}
+#endif
+}
 
 #ifdef CMP_CC1101
-  if (hasCC1101)
-    cc1101::setTransmitMode(); 
+	if (hasCC1101) cc1101::setTransmitMode();
 #endif
 
-	for (uint8_t i = 0; i<repeats; i++)
+
+	if (command[0].type == combined && command[0].repeats > 0) {
+		repeats = command[0].repeats;
+	}
+	for (uint8_t i = 0; i < repeats; i++)
 	{
+		DBG_PRINT("repeat "); DBG_PRINT(i); DBG_PRINT("/"); DBG_PRINT(repeats);
+
 		for (uint8_t c = 0; c <= cmdNo; c++)
 		{
-			if (command[c].type == raw) send_raw(command[c].datastart, command[c].dataend, command[c].buckets);
-			if (command[c].type == manchester) send_mc(command[c].datastart, command[c].dataend, command[c].sendclock);
+			DBG_PRINT(" cmd "); DBG_PRINT(c); DBG_PRINT("/"); DBG_PRINT(cmdNo);
+			DBG_PRINT(" reps "); DBG_PRINT(command[c].repeats);
+
+			if (command[c].type == raw) { for (uint8_t rep = 0; rep < command[c].repeats; rep++) send_raw(command[c].datastart, command[c].dataend, command[c].buckets); }
+			else if (command[c].type == manchester) { for (uint8_t rep = 0; rep < command[c].repeats; rep++)send_mc(command[c].datastart, command[c].dataend, command[c].sendclock); }
 			digitalLow(PIN_SEND);
+			DBG_PRINT(".");
+
 		}
+		DBG_PRINTLN(" ");
+
 		if (extraDelay) delay(1);
 	}
 
-	enableReceive();	// enable the receiver
-	MSG_PRINTLN(cmdstring); // echo
+#ifdef CMP_CC1101
+	if (ccParamAnz > 0) {
+		DBG_PRINT("ccreg write back ");
+		for (uint8_t i = 0; i<ccParamAnz; i++)
+		{
+			val = ccReg[i];
+			printHex2(val);
+			cc1101::writeReg(0x0d + i, val);    // gemerkte Registerwerte zurueckschreiben
+		}
+		DBG_PRINTLN("");
+	}
+#endif
 
+	MSG_PRINTLN(cmdstring); // echo
+	musterDec.reset();
+	enableReceive();	// enable the receiver
 }
 
 
