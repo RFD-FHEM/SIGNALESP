@@ -26,15 +26,18 @@ namespace cc1101 {
   #endif
 	#define PIN_MARK433			  4  // LOW -> 433Mhz | HIGH -> 868Mhz
 #endif
-
-	#define csPin	15   // CSN  out
-	#define mosiPin 13   // MOSI out
-	#define misoPin 12   // MISO in
-	#define sckPin  14   // SCLK out	
-
-
+	/*
+	#define csPin	D8   // CSN  out
+	#define mosiPin D7   // MOSI out
+	#define misoPin D6   // MISO in
+	#define sckPin  D5   // SCLK out	
+	*/
+	#define csPin	SS	   // CSN  out
+	#define mosiPin MOSI   // MOSI out
+	#define misoPin MISO   // MISO in
+	#define sckPin  SCK    // SCLK out
 	
-	#define CC1100_WRITE_BURST    0x40
+	#define CC1100_WRITE_BURST  0x40
   #define CC1101_WRITE_SINGLE   0x00
   #define CC1100_READ_BURST     0xC0
   #define CC1101_READ_SINGLE    0x80
@@ -92,6 +95,7 @@ namespace cc1101 {
   };
   
 #ifdef ESP8266
+	SPIClass spi;
 	#define pinAsInput(pin) pinMode(pin, INPUT)
 	#define pinAsOutput(pin) pinMode(pin, OUTPUT)
 	#define pinAsInputPullUp(pin) pinMode(pin, INPUT_PULLUP)
@@ -110,9 +114,13 @@ namespace cc1101 {
 	#define wait_Miso()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return; miso_count--; }      // wait until SPI MISO line goes low 
     #define wait_Miso_rf()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return false; miso_count--; }      // wait until SPI MISO line goes low 
 
-	#define cc1101_Select()   digitalLow(csPin)          // select (SPI) CC1101
-	#define cc1101_Deselect() digitalHigh(csPin) 
-	
+	//#define cc1101_Select()   digitalLow(csPin)          // select (SPI) CC1101
+	//#define cc1101_Deselect() digitalHigh(csPin) 
+
+	#define cc1101_Select()  spi.begin()
+	#define cc1101_Deselect()  spi.end()
+
+
 	#define EE_CC1100_CFG        3
 	#define EE_CC1100_CFG_SIZE   0x29
 	#define EE_CC1100_PA         0x30  //  (EE_CC1100_CFG+EE_CC1100_CFG_SIZE)  // 2C
@@ -212,7 +220,7 @@ namespace cc1101 {
 		while (!(SPSR & _BV(SPIF)));                     // wait until SPI operation is terminated
 		return SPDR;
 	#else
-		return SPI.transfer(val);
+		return spi.transfer(val);
 	#endif
 	}
 
@@ -429,10 +437,11 @@ namespace cc1101 {
 		digitalHigh(sckPin);
 		digitalLow(mosiPin);
 #else
-		SPI.setDataMode(SPI_MODE0);
+	/*	SPI.setDataMode(SPI_MODE0);
 		SPI.setBitOrder(MSBFIRST);
 		SPI.begin();
 		SPI.setClockDivider(SPI_CLOCK_DIV4);
+	*/
 #endif
 		pinAsInput(PIN_RECEIVE);    // gdo2
 		pinAsOutput(PIN_SEND);      // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
