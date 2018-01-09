@@ -1,4 +1,4 @@
-// cc1101.h
+﻿// cc1101.h
 
 #ifndef _CC1101_h
 #define _CC1101_h
@@ -18,10 +18,11 @@
 extern String cmdstring;
 
 
-
 namespace cc1101 {
 #if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101)
-	#define SS					  8  
+	#ifndef ESP8266
+		#define SS					  8  
+	#endif
 	#define PIN_MARK433			  4  // LOW -> 433Mhz | HIGH -> 868Mhz
 #endif
 
@@ -29,8 +30,6 @@ namespace cc1101 {
 	#define mosiPin MOSI   // MOSI out
 	#define misoPin MISO   // MISO in
 	#define sckPin  SCK    // SCLK out	
-
-
 	
 	#define CC1100_WRITE_BURST    0x40
   #define CC1101_WRITE_SINGLE   0x00
@@ -397,7 +396,7 @@ namespace cc1101 {
 				EEPROM.write(EE_CC1100_PA + i, 0);
 			}
 		}
-    EEPROM.commit();
+		EEPROM.commit();
 		MSG_PRINTLN("ccFactoryReset done");  
 	}
 

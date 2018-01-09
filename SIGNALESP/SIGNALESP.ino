@@ -8,13 +8,13 @@
 #define CMP_CC1101
 
 #ifdef CMP_CC1101
-	#define PIN_RECEIVE            5
+	#define PIN_RECEIVE            D1
 #else
 	#define PIN_RECEIVE            2
 #endif
 
 #define PIN_LED                16
-#define PIN_SEND               4  // gdo0Pin TX out
+#define PIN_SEND               D2  // gdo0Pin TX out
 #define BAUDRATE               115200
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
@@ -815,7 +815,7 @@ void send_cmd()
 
 			if (ccParamAnz > 0 && ccParamAnz <= 5 && hasCC1101) {
 				uint8_t hex;
-				MSG_PRINT("write new ccreg  ");
+				DBG_PRINT("write new ccreg  ");
 				for (uint8_t i=0;i<ccParamAnz;i++)
 				{
 					ccReg[i] = cc1101::readReg(0x0d + i, 0x80);    // alte Registerwerte merken
@@ -824,7 +824,7 @@ void send_cmd()
 					hex = (uint8_t)msg_part.charAt(3 + i*2);
 					val = cc1101::hex2int(hex) + val;
 					cc1101::writeReg(0x0d + i, val);            // neue Registerwerte schreiben
-					printHex2(val);
+					printHex2Dbg(val);
 				}
 				DBG_PRINTLN("");
 			}
@@ -866,7 +866,7 @@ void send_cmd()
 		for (uint8_t i = 0; i<ccParamAnz; i++)
 		{
 			val = ccReg[i];
-			printHex2(val);
+			printHex2Dbg(val);
 			cc1101::writeReg(0x0d + i, val);    // gemerkte Registerwerte zurueckschreiben
 		}
 		DBG_PRINTLN("");
@@ -1136,7 +1136,6 @@ inline void ethernetEvent()
 			serverClient = Server.available();
 			DBG_PRINT("New client: ");
 			DBG_PRINTLN(serverClient.remoteIP());
-//			musterDec.setStreamOutput(&serverClient);
 			return;
 		}
 		//no free/disconnected spot so reject
@@ -1284,6 +1283,12 @@ void printHex2(const byte hex) {   // Todo: printf oder scanf nutzen
     MSG_PRINT("0");
   }
   MSG_PRINT(hex, HEX);
+}
+void printHex2Dbg(const byte hex) {   // Todo: printf oder scanf nutzen
+  if (hex < 16) {
+    DBG_PRINT("0");
+  }
+  DBG_PRINT(hex, HEX);
 }
 #endif
 
