@@ -331,14 +331,14 @@ void setup() {
 	os_timer_setfn(&cronTimer, cronjob, NULL);
 	os_timer_arm(&cronTimer, 31, true);
 
-#ifdef comp_cc1101
+#ifdef CMP_CC1101
 	if (!hasCC1101 || cc1101::regCheck()) {
 #endif
 	
 	musterDec.setStreamCallback(writeCallback);
 	enableReceive();
     DBG_PRINTLN(F("receiver enabled"));
-#ifdef comp_cc1101
+#ifdef CMP_CC1101
   } else {
     DBG_PRINTLN(F("cc1101 is not correctly set. Please do a factory reset via command e"));
   }
