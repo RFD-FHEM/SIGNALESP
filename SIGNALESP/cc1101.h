@@ -11,32 +11,25 @@
 #include <EEPROM.h>
 #include "output.h"
 
+#ifdef ESP8266
+	#include <SPI.h>
+#endif
 
 extern String cmdstring;
 
 
 namespace cc1101 {
-#if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101) 
-  #ifndef ESP8266
-		#define SS					  8  
-  #endif
+#if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101)
+	#define SS					  8  
 	#define PIN_MARK433			  4  // LOW -> 433Mhz | HIGH -> 868Mhz
 #endif
 
-
-	
-	#define csPin	D8   // CSN  out
-	/*
-	#define mosiPin D7   // MOSI out
-	#define misoPin D6   // MISO in
-	#define sckPin  D5   // SCLK out	
-	*/
-	//#define csPin	SS	   // CSN  out
+	#define csPin	SS	   // CSN  out
 	#define mosiPin MOSI   // MOSI out
 	#define misoPin MISO   // MISO in
-	#define sckPin  SCK    // SCLK out
+	#define sckPin  SCK    // SCLK out	
 	
-	#define CC1100_WRITE_BURST  0x40
+	#define CC1100_WRITE_BURST    0x40
   #define CC1101_WRITE_SINGLE   0x00
   #define CC1100_READ_BURST     0xC0
   #define CC1101_READ_SINGLE    0x80
@@ -50,11 +43,19 @@ namespace cc1101 {
 	#define CC1100_IOCFG2      0x00  // GDO2 output configuration
 	#define CC1100_PKTCTRL0    0x08  // Packet config register
 
-	// Status registers - older version base on 0x30
-  #define CC1101_PARTNUM      0xF0 // Chip ID
-  #define CC1101_VERSION      0xF1 // Chip ID
-  #define CC1100_RSSI         0xF4 // Received signal strength indication
-	#define CC1100_MARCSTATE    0xF5 // Control state machine state
+  uint8_t revision = 0x01;
+  
+	// Status registers - newer version base on 0xF0
+  #define CC1101_PARTNUM_REV01      0xF0 // Chip ID
+  #define CC1101_VERSION_REV01      0xF1 // Chip ID
+  #define CC1100_RSSI_REV01         0xF4 // Received signal strength indication
+	#define CC1100_MARCSTATE_REV01    0xF5 // Control state machine state
+
+  // Status registers - older version base on 0x30
+  #define CC1101_PARTNUM_REV00      0x30 // Chip ID
+  #define CC1101_VERSION_REV00      0x31 // Chip ID
+  #define CC1100_RSSI_REV00         0x34 // Received signal strength indication
+  #define CC1100_MARCSTATE_REV00    0x35 // Control state machine state
 	 
 	// Strobe commands
 	#define CC1101_SRES     0x30  // reset
@@ -94,7 +95,6 @@ namespace cc1101 {
   };
   
 #ifdef ESP8266
-	SPIClass spi;
 	#define pinAsInput(pin) pinMode(pin, INPUT)
 	#define pinAsOutput(pin) pinMode(pin, OUTPUT)
 	#define pinAsInputPullUp(pin) pinMode(pin, INPUT_PULLUP)
@@ -115,11 +115,7 @@ namespace cc1101 {
 
 	#define cc1101_Select()   digitalLow(csPin)          // select (SPI) CC1101
 	#define cc1101_Deselect() digitalHigh(csPin) 
-
-	//#define cc1101_Select()  spi.begin()
-	//#define cc1101_Deselect()  spi.end()
-
-
+	
 	#define EE_CC1100_CFG        3
 	#define EE_CC1100_CFG_SIZE   0x29
 	#define EE_CC1100_PA         0x30  //  (EE_CC1100_CFG+EE_CC1100_CFG_SIZE)  // 2C
@@ -219,7 +215,7 @@ namespace cc1101 {
 		while (!(SPSR & _BV(SPIF)));                     // wait until SPI operation is terminated
 		return SPDR;
 	#else
-		return spi.transfer(val);
+		return SPI.transfer(val);
 	#endif
 	}
 
@@ -393,14 +389,30 @@ namespace cc1101 {
 				EEPROM.write(EE_CC1100_PA + i, 0);
 			}
 		}
+		EEPROM.commit();
 		MSG_PRINTLN("ccFactoryReset done");  
 	}
 
-  uint8_t chipVersion() { return readReg(CC1101_VERSION, CC1101_READ_SINGLE); };
+  uint8_t chipVersionRev()
+  {
+    return readReg((revision == 0x01 ? CC1101_VERSION_REV01 : CC1101_VERSION_REV00), CC1101_READ_SINGLE);
+  };
+  
+  uint8_t chipVersion() {
+    uint8_t version = chipVersionRev();
+ 
+    if (revision != 0x00 && (version == 0xFF || version == 0x00)) {
+      revision = 0x00;
+      version = chipVersionRev();
+    }
+    
+    return version;
+  }
+  
 	bool checkCC1101() {
 
-		uint8_t partnum = readReg(CC1101_PARTNUM, CC1101_READ_SINGLE);  // Partnum
-		uint8_t version = chipVersion();  // Version
+    uint8_t version = chipVersion();  // Version
+		uint8_t partnum = readReg((revision == 0x01 ? CC1101_PARTNUM_REV01 : CC1101_PARTNUM_REV00), CC1101_READ_SINGLE);  // Partnum
 		DBG_PRINT("CCVersion=");	DBG_PRINTLN("0x" + String(version, HEX));
 		DBG_PRINT("CCPartnum=");	DBG_PRINTLN("0x" + String(partnum, HEX));
 
@@ -426,7 +438,7 @@ namespace cc1101 {
 		pinAsOutput(csPin);                    // set pins for SPI communication
 		
 		#ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
-		pinAsInputPullUp(PIN_MARK433);
+		  pinAsInputPullUp(PIN_MARK433);
 		#endif
 		//// �nderungsbeginn  ---> 
 
@@ -438,18 +450,16 @@ namespace cc1101 {
 #else
 		SPI.setDataMode(SPI_MODE0);
 		SPI.setBitOrder(MSBFIRST);
-		SPI.setClockDivider(SPI_CLOCK_DIV4);
-		SPI.setHwCs(false);
 		SPI.begin();
-	
+		SPI.setClockDivider(SPI_CLOCK_DIV4);
 #endif
 		pinAsInput(PIN_RECEIVE);    // gdo2
 		pinAsOutput(PIN_SEND);      // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
 	}
 
-	uint8_t getRSSI()
-	{
-		return readReg(CC1100_RSSI, CC1101_STATUS);// Pruefen ob Umwandung von uint to int den richtigen Wert zurueck gibt
+  uint8_t getRevision() { return revision; }
+	uint8_t getRSSI() {
+    return readReg((revision == 0x01 ? CC1100_RSSI_REV01 : CC1100_RSSI_REV00), CC1101_STATUS);
 	}
 	
 	inline void setIdleMode()
@@ -459,7 +469,7 @@ namespace cc1101 {
 	}
 
 	uint8_t currentMode() {
-		return readReg(CC1100_MARCSTATE, CC1100_READ_BURST);
+		return readReg((revision == 0x01 ? CC1100_MARCSTATE_REV01 : CC1100_MARCSTATE_REV00), CC1100_READ_BURST);
 	}
 	
 	void setReceiveMode()

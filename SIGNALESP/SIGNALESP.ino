@@ -43,8 +43,8 @@ SignalDetectorClass musterDec;
 
 
 #ifdef CMP_CC1101
-#include <SPI.h>      // prevent travis errors
 #include "cc1101.h"
+#include <SPI.h>      // prevent travis errors
 #endif
 
 #define pulseMin  90
@@ -850,7 +850,7 @@ void HandleCommand()
 		else if (cmdstring.charAt(1) == 'S') {
 			configSET();
 		}
-#ifdef comp_cc1101
+#ifdef CMP_CC1101
 		else if (isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && hasCC1101) {
 			reg = cmdstringPos2int(1);
 			cc1101::readCCreg(reg);
@@ -860,7 +860,7 @@ void HandleCommand()
 			MSG_PRINTLN(F("Unsupported command"));
 		}
 	}
-#ifdef comp_cc1101
+#ifdef CMP_CC1101
 	else if (cmdstring.charAt(0) == cmd_write) {            // write EEPROM und CC11001 register
 		if (cmdstring.charAt(1) == 'S' && cmdstring.charAt(2) == '3' && hasCC1101) {       // WS<reg>  Command Strobes
 			cc1101::commandStrobes();
@@ -868,7 +868,8 @@ void HandleCommand()
 		else if (isHexadecimalDigit(cmdstring.charAt(1)) && isHexadecimalDigit(cmdstring.charAt(2)) && isHexadecimalDigit(cmdstring.charAt(3)) && isHexadecimalDigit(cmdstring.charAt(4))) {
 			reg = cmdstringPos2int(1);
 			val = cmdstringPos2int(3);
-			EEPROM.write(reg, val);
+			EEPROM.write(reg+1, val); // scheinbar hat sich hier etwas um 1 Byte verschoben
+			EEPROM.commit();
 			if (hasCC1101) {
 				cc1101::writeCCreg(reg, val);
 			}
@@ -904,6 +905,7 @@ void HandleCommand()
 	}
 	else if (cmdstring.charAt(0) == cmd_ccFactoryReset && hasCC1101) {
 		cc1101::ccFactoryReset();
+		EEPROM.commit();
 		cc1101::CCinit();
 	}
 #endif
@@ -990,6 +992,7 @@ inline void ethernetEvent()
 			if (serverClient) serverClient.stop();
 			serverClient = Server.available();
 			DBG_PRINTLN("New client: ");
+			DBG_PRINTLN(serverClient.remoteIP());
 			return;
 		}
 		//no free/disconnected spot so reject
