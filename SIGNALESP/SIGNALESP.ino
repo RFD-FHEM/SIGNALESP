@@ -14,7 +14,7 @@
 #endif
 
 #define PIN_LED                16
-#define PIN_SEND               D1  // gdo0Pin TX out
+#define PIN_SEND               D2  // gdo0Pin TX out
 #define BAUDRATE               115200
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
