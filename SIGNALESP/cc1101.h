@@ -11,12 +11,8 @@
 #include <EEPROM.h>
 #include "output.h"
 
-#ifdef ESP8266
-	#include <SPI.h>
-#endif
 
 extern String cmdstring;
-
 
 
 namespace cc1101 {
@@ -26,13 +22,16 @@ namespace cc1101 {
   #endif
 	#define PIN_MARK433			  4  // LOW -> 433Mhz | HIGH -> 868Mhz
 #endif
-	/*
+
+
+	
 	#define csPin	D8   // CSN  out
+	/*
 	#define mosiPin D7   // MOSI out
 	#define misoPin D6   // MISO in
 	#define sckPin  D5   // SCLK out	
 	*/
-	#define csPin	SS	   // CSN  out
+	//#define csPin	SS	   // CSN  out
 	#define mosiPin MOSI   // MOSI out
 	#define misoPin MISO   // MISO in
 	#define sckPin  SCK    // SCLK out
@@ -114,11 +113,11 @@ namespace cc1101 {
 	#define wait_Miso()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return; miso_count--; }      // wait until SPI MISO line goes low 
     #define wait_Miso_rf()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return false; miso_count--; }      // wait until SPI MISO line goes low 
 
-	//#define cc1101_Select()   digitalLow(csPin)          // select (SPI) CC1101
-	//#define cc1101_Deselect() digitalHigh(csPin) 
+	#define cc1101_Select()   digitalLow(csPin)          // select (SPI) CC1101
+	#define cc1101_Deselect() digitalHigh(csPin) 
 
-	#define cc1101_Select()  spi.begin()
-	#define cc1101_Deselect()  spi.end()
+	//#define cc1101_Select()  spi.begin()
+	//#define cc1101_Deselect()  spi.end()
 
 
 	#define EE_CC1100_CFG        3
@@ -437,11 +436,12 @@ namespace cc1101 {
 		digitalHigh(sckPin);
 		digitalLow(mosiPin);
 #else
-	/*	SPI.setDataMode(SPI_MODE0);
+		SPI.setDataMode(SPI_MODE0);
 		SPI.setBitOrder(MSBFIRST);
-		SPI.begin();
 		SPI.setClockDivider(SPI_CLOCK_DIV4);
-	*/
+		SPI.setHwCs(false);
+		SPI.begin();
+	
 #endif
 		pinAsInput(PIN_RECEIVE);    // gdo2
 		pinAsOutput(PIN_SEND);      // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   

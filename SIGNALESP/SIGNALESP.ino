@@ -5,16 +5,16 @@
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
 
-//#define CMP_CC1101
+#define CMP_CC1101
 
 #ifdef CMP_CC1101
-	#define PIN_RECEIVE            5
+	#define PIN_RECEIVE            D1
 #else
 	#define PIN_RECEIVE            2
 #endif
 
 #define PIN_LED                16
-#define PIN_SEND               4  // gdo0Pin TX out
+#define PIN_SEND               D1  // gdo0Pin TX out
 #define BAUDRATE               115200
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
@@ -43,8 +43,8 @@ SignalDetectorClass musterDec;
 
 
 #ifdef CMP_CC1101
-  #include "cc1101.h"
-  #include <SPI.h>      // prevent travis errors
+#include <SPI.h>      // prevent travis errors
+#include "cc1101.h"
 #endif
 
 #define pulseMin  90
