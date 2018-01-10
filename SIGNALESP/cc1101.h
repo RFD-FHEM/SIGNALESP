@@ -12,6 +12,7 @@
 #include "output.h"
 
 #ifdef ESP8266
+  #include <pins_arduino.h> // prevent travis errors
 	#include <SPI.h>
 #endif
 

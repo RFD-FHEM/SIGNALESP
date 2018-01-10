@@ -7,8 +7,11 @@
 
 #define CMP_CC1101
 
-#ifdef CMP_CC1101
+#ifdef ESP8266
   #include <pins_arduino.h> // prevent travis errors
+#endif
+
+#ifdef CMP_CC1101
 	#define PIN_RECEIVE            D1
 #else
 	#define PIN_RECEIVE            2
