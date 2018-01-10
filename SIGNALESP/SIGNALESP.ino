@@ -8,7 +8,7 @@
 #define CMP_CC1101
 
 #ifdef ESP8266
-  #include "Arduino.h"  // prevent travis errors
+  #include "Arduino.h"    // prevent travis errors
 #endif
 
 #ifdef CMP_CC1101
