@@ -7,18 +7,14 @@
 
 #define CMP_CC1101
 
-#ifdef ESP8266
-  #include "Arduino.h"    // prevent travis errors
-#endif
-
 #ifdef CMP_CC1101
-	#define PIN_RECEIVE            D1
+	#define PIN_RECEIVE            5  // D1
 #else
 	#define PIN_RECEIVE            2
 #endif
 
 #define PIN_LED                16
-#define PIN_SEND               D2  // gdo0Pin TX out
+#define PIN_SEND               4  // D2  // gdo0Pin TX out
 #define BAUDRATE               115200
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
