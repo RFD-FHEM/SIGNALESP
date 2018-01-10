@@ -12,7 +12,6 @@
 #include "output.h"
 
 #ifdef ESP8266
-  #include <pins_arduino.h> // prevent travis errors
 	#include <SPI.h>
 #endif
 
@@ -21,9 +20,7 @@ extern String cmdstring;
 
 namespace cc1101 {
 #if defined(ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101)
-	#ifndef ESP8266
-		#define SS					  8  
-	#endif
+	#define SS					  8  
 	#define PIN_MARK433			  4  // LOW -> 433Mhz | HIGH -> 868Mhz
 #endif
 
