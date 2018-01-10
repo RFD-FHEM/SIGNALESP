@@ -8,6 +8,7 @@
 #define CMP_CC1101
 
 #ifdef CMP_CC1101
+  #include <pins_arduino.h> // prevent travis errors
 	#define PIN_RECEIVE            D1
 #else
 	#define PIN_RECEIVE            2
