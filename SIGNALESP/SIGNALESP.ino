@@ -267,6 +267,9 @@ void setup() {
 				else {
 					DBG_PRINTLN("failed to load json config");
 				}
+
+        // close configFile
+        configFile.close();
 			}
 		}
 	}
