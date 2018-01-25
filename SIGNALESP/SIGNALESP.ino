@@ -63,6 +63,7 @@ extern "C" {
 }
 
 os_timer_t cronTimer;
+os_timer_t blinksos;
 
 
 bool hasCC1101 = false;
@@ -98,13 +99,33 @@ char static_ip[16] = "10.22.0.200";
 char static_gw[16] = "0.0.0.0";
 char static_sn[16] = "255.255.255.0";
 
+const char sos_sequence[] = "0101010001110001110001110001010100000000";
+const char boot_sequence[] = "00010100111";
+
+
+void ICACHE_RAM_ATTR sosBlink (void *pArg) {
+
+	static uint8_t pos = 0;
+	const char* pChar;
+	pChar = (const char*)pArg; //OK in both C and C++
+
+
+	digitalWrite(PIN_LED, pChar[pos] == '1' ? HIGH : LOW);
+	pos++;
+	if (pos == sizeof(pChar) * sizeof(pChar[1]))
+		pos = 0;
+
+}
+
+
 bool startWPS() {
 	// from https://gist.github.com/copa2/fcc718c6549721c210d614a325271389
 	// wpstest.ino
 	Serial.println("WPS config start");
 	WiFi.disconnect();
 	WiFi.mode(WIFI_STA); // WPS only works in station mode
-	
+	digitalHigh(PIN_LED);
+
 	delay(1000);
 	bool wpsSuccess = WiFi.beginWPSConfig();
 	if (wpsSuccess) {
@@ -118,6 +139,8 @@ bool startWPS() {
 			wpsSuccess = false;
 		}
 	}
+	digitalLow(PIN_LED);
+
 	return wpsSuccess;
 }
 
@@ -133,6 +156,9 @@ void saveConfigCallback() {
 
 void setup() {
 	//ESP.wdtEnable(2000);
+
+	os_timer_setfn(&blinksos, &sosBlink, (void *)boot_sequence);
+	os_timer_arm(&blinksos, 300, true);
 
   Serial.begin(115200);
   Serial.setDebugOutput(true);
@@ -277,6 +303,9 @@ void setup() {
 
 		Serial.println("failed to connect, we now enter WPS Mode");
 		delay(3000);
+		os_timer_disarm(&blinksos);
+		os_timer_setfn(&blinksos, &sosBlink, (void *)sos_sequence);
+		os_timer_arm(&blinksos, 300, true);
 
 
 			Serial.printf("\nCould not connect to WiFi. state='%d'\n", WiFi.status());
@@ -285,6 +314,7 @@ void setup() {
 			if (!startWPS()) {
 				Serial.println("Failed to connect with WPS, will restart ESP now :-(");
 				delay(3500);
+
 				while (1);
 				//ESP.restart();
 				//ESP.reset();
@@ -325,14 +355,24 @@ void setup() {
 			configFile.close();
 			//end save
 		}
+		os_timer_disarm(&blinksos);
+
+		// Blink if we have a connection
+		for (int i = 0; i < 10; i++)
+		{
+			digitalHigh(PIN_LED);
+			delay(1000);
+			digitalLow(PIN_LED);
+		}
+
 
 	}
-	Server.begin();  // telnet server
 	Server.setNoDelay(true);
-
+	Server.begin();  // telnet server
 
 
 	os_timer_disarm(&cronTimer);
+
 	os_timer_setfn(&cronTimer, cronjob, NULL);
 	os_timer_arm(&cronTimer, 31, true);
 
