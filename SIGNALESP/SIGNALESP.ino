@@ -1,7 +1,7 @@
 
 
 #define PROGNAME               "RF_RECEIVER-ESP"
-#define PROGVERS               "3.3.1-rc2"
+#define PROGVERS               "3.3.1-rc4"
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
 
@@ -243,6 +243,7 @@ void setup() {
 					DBG_PRINTLN("failed to load json config");
 				}
 			}
+			configFile.close();
 		}
 	}
 	else {
@@ -290,6 +291,10 @@ void setup() {
 			}
 
 		delay(5000);
+	}
+	else {
+		if (shouldSaveConfig)
+			wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn);
 	}
 
 	if (WiFi.status() == WL_CONNECTED) {          // last saved credentials
