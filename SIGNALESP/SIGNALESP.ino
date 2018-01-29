@@ -8,16 +8,39 @@
 #define CMP_CC1101
 
 #ifdef CMP_CC1101
-	#define PIN_RECEIVE           5// D1
+	#define PIN_RECEIVE            5  // D1
 #else
 	#define PIN_RECEIVE            2
 #endif
 
 #define PIN_LED                16
-#define PIN_SEND               4// D2  // gdo0Pin TX out
+#define PIN_SEND               4  // D2  // gdo0Pin TX out
 #define BAUDRATE               115200
 #define FIFO_LENGTH			   200
 #define DEBUG				   1
+#define _DEBUG_DEV_SERIAL
+
+#ifdef _DEBUG_DEV_SERIAL
+//  #define _DEBUG_DEV_SERIAL_SEND_DELAYED
+//  #define _CC1101_DEBUG_CONFIG
+#endif
+
+
+#define _USE_WRITE_BUFFER
+
+#ifdef _USE_WRITE_BUFFER
+  const size_t writeBufferSize = 256;
+  size_t writeBufferCurrent = 0;
+  uint8_t writeBuffer[writeBufferSize+1]; // one extra buffer for \n
+
+  //#define _USE_WRITE_BUFFER_DEBUG 1
+  //#define _USE_WRITE_BUFFER_STATS
+  
+  #ifdef _USE_WRITE_BUFFER_STATS
+    size_t writeCalls = 0;
+    unsigned long firstWriteCall;
+  #endif  // _USE_WRITE_BUFFER_STATS
+#endif  // _USE_WRITE_BUFFER
 
 
 #define ETHERNET_PRINT
@@ -38,13 +61,13 @@ WiFiClient serverClient;
 
 SimpleFIFO<int, FIFO_LENGTH> FiFo; //store FIFO_LENGTH # ints
 #include <signalDecoder.h>
-#include <FastDelegate.h> 
+#include <FastDelegate.h> // prevent travis errors
 SignalDetectorClass musterDec;
 
 
 #ifdef CMP_CC1101
-#include "cc1101.h"
-#include <SPI.h>      // prevent travis errors
+  #include "cc1101.h"
+  #include <SPI.h>      // prevent travis errors
 #endif
 
 #define pulseMin  90
@@ -92,7 +115,7 @@ void configCMD();
 void storeFunctions(const int8_t ms = 1, int8_t mu = 1, int8_t mc = 1);
 void getFunctions(bool *ms, bool *mu, bool *mc);
 uint8_t rssiCallback() { return 0; }; // Dummy return if no rssi value can be retrieved from receiver
-size_t writeCallback(const uint8_t *buf,uint8_t len);
+//uint16_t writeCallback(const uint8_t *buf,uint8_t len);
 
 //default custom static IP
 char static_ip[16] = "10.22.0.200";
@@ -161,7 +184,7 @@ void setup() {
 	os_timer_arm(&blinksos, 300, true);
 
   Serial.begin(115200);
-  Serial.setDebugOutput(true);
+//  Serial.setDebugOutput(true);
   while (!Serial)
     delay(90);
 
@@ -176,17 +199,19 @@ void setup() {
 
   initEEPROM();
 
+  // register write callback
+  musterDec.registerWriteCallback(writeCallback);
+  
 #ifdef CMP_CC1101
   cc1101::CCinit();
   hasCC1101 = cc1101::checkCC1101();
   if (hasCC1101) {
-      DBG_PRINTLN("CC1101 found");
+      DBG_PRINTLN("CC1101 found (rev. 0" + String(cc1101::getRevision(), HEX) + ")");
       musterDec.setRSSICallback(&cc1101::getRSSI);                    // Provide the RSSI Callback
-  } else 
-#endif
-	musterDec.setRSSICallback(&rssiCallback); // Provide the RSSI Callback    
+  }
+#endif  
 
-												/*
+/*
   #ifdef DEBUG
     Serial.printf("\nTry connecting to WiFi with SSID '%s'\n", WiFi.SSID().c_str());
   #endif
@@ -268,6 +293,9 @@ void setup() {
 				else {
 					DBG_PRINTLN("failed to load json config");
 				}
+
+        // close configFile
+        configFile.close();
 			}
 			configFile.close();
 		}
@@ -278,17 +306,25 @@ void setup() {
 	//end read
 
 	WiFiManager wifiManager;
+  //  wifiManager.setBreakAfterConfig(true);
+  //reset settings - for testing
+  //wifiManager.resetSettings();
 
-	//wifiManager.setBreakAfterConfig(true);
-	//reset settings - for testing
-	//wifiManager.resetSettings();
- 
-	//tries to connect to last known settings
-	//if it does not connect it starts an access point with the specified name
-	//here  "NodeDuino" with no password
-	//and goes into a blocking loop awaiting configuration
-
-	wifiManager.setConfigPortalTimeout(60);
+  //tries to connect to last known settings
+  //if it does not connect it starts an access point with the specified name
+  //here  "NodeDuino" with no password
+  //and goes into a blocking loop awaiting configuration
+/*
+  // old wifi crap
+  if (!wifiManager.autoConnect("NodeDuino")) {
+    Serial.println("failed to connect, we should reset as see if it connects");
+    delay(3000);
+    ESP.reset();
+    delay(5000);
+  }
+*/
+  // new wifi crap
+  wifiManager.setConfigPortalTimeout(60);
 	wifiManager.setSaveConfigCallback(saveConfigCallback);
 
 	IPAddress _ip, _gw, _sn;
@@ -297,6 +333,7 @@ void setup() {
 	_gw.fromString(static_gw);
 	_sn.fromString(static_sn);
 	wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn);
+  // end wifi crap
 
 
 	if (!wifiManager.startConfigPortal()) {
@@ -332,8 +369,7 @@ void setup() {
 	  //if you get here you have connected to the WiFi
 		Serial.println("connected...)");
 
-
-		Serial.println("local ip");
+		Serial.print("local ip: ");
 		Serial.println(WiFi.localIP());
 
 		if (shouldSaveConfig) {
@@ -380,7 +416,6 @@ void setup() {
 	if (!hasCC1101 || cc1101::regCheck()) {
 #endif
 	
-	musterDec.setStreamCallback(writeCallback);
 	enableReceive();
     DBG_PRINTLN(F("receiver enabled"));
 #ifdef CMP_CC1101
@@ -390,7 +425,6 @@ void setup() {
 #endif
 
 	cmdstring.reserve(40);
-
 
 }
 
@@ -414,16 +448,71 @@ void loop() {
 		if (!command_available) { cmdstring = ""; }
 		blinkLED = true;
 	}
+	
 	if (fifousage < FiFo.count())
 	  fifousage = FiFo.count();
-
-	while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
-		aktVal = FiFo.dequeue();
-		state = musterDec.decode(&aktVal);
-		if (state) blinkLED = true; //LED blinken, wenn Meldung dekodiert
-		if (FiFo.count()<120) yield();
+  while (FiFo.count()>0) { //Puffer auslesen und an Dekoder uebergeben
+  		aktVal = FiFo.dequeue();
+	  	state = musterDec.decode(&aktVal);
+		  if (state) blinkLED = true; //LED blinken, wenn Meldung dekodiert
+//      if (FiFo.count()<120) yield();
 	}
+  
+#ifdef _DEBUG_DEV_SERIAL
+  if (Serial.available()) {
+    unsigned char c = Serial.read();
+//    if (c != char(10))
+//      Serial.println(".");
 
+    int8_t rssi;
+    switch(c) {
+      case 'c':
+#ifdef CMP_CC1101
+        Serial.println("marc: 0x" + String(cc1101::currentMode(), HEX));
+#endif
+        Serial.println("fifo: " + String(FiFo.count()) + ", max. " + String(fifousage));
+#ifdef _CC1101_DEBUG_CONFIG
+        cc1101::dumpConfigRegister();
+#endif
+        break;
+      case 'd':
+        dumpEEPROM();
+        break;
+#ifdef CMP_CC1101
+      case 'r':
+        rssi = cc1101::getRSSI();
+        Serial.printf("rssi: 0x%2X %d\n", (uint8_t)rssi, rssi);
+        break;
+#endif
+      case 's':
+#ifndef _DEBUG_DEV_SERIAL_SEND_DELAYED
+        MSG_PRINTLN("Test Test Test");
+#else
+        ESP.wdtDisable();
+        MSG_PRINT("Test Test ");
+        delayMicroseconds(1000*1000);
+        MSG_PRINTLN("1s delay Test");
+        delayMicroseconds(2000*1000);
+        MSG_PRINTLN("2s delay without yield()");
+        ESP.wdtEnable(1000);
+#endif  // _DEBUG_DEV_SERIAL_SEND_DELAYED
+        break;
+      case 'u':
+        Serial.println("uptime: " + uptime());
+        break;
+      case 'w':
+        unsigned long start = micros();
+        for (byte i=0; i<12; i++) // 240 Zeichen
+          musterDec.write("Test Test Test Test ");
+        musterDec.write("Test Test 256=>\n<= ");
+        musterDec.write("Test ");
+        musterDec.write(MSG_END);
+        musterDec.write("\n");
+        Serial.println("elapsed time: " + String(micros() - start) + " us");
+        break;
+    }
+  }
+#endif	// _DEBUG_DEV_SERIAL
 }
 
 
@@ -470,65 +559,118 @@ void disableReceive() {
 
 
 //============================== Write callback =========================================
-
-#define _USE_WRITE_BUFFER
-
 #ifdef _USE_WRITE_BUFFER
-const size_t writeBufferSize = 128;
-size_t writeBufferCurrent = 0;
-uint8_t writeBuffer[writeBufferSize]; 
-#endif;
-size_t writeCallback(const uint8_t *buf, uint8_t len=1)
+#ifdef _USE_WRITE_BUFFER_DEBUG
+void dumpBuffer() {
+//#if _USE_WRITE_BUFFER_DEBUG < 2
+//    return;
+//#endif
+    
+  Serial.println("buffer: ");
+  for (size_t idx=0; idx<writeBufferCurrent+1; idx++) {
+    Serial.printf("%02X ", writeBuffer[idx]);
+    if (idx % 16 == 15)
+      Serial.println();
+  }
+  Serial.println();
+}
+#endif  // _USE_WRITE_BUFFER_DEBUG
+
+uint8_t *memchr2(const uint8_t *ptr, uint8_t ch, size_t size) {
+  for (int i = 0; i < size; i++)
+    if (*ptr++ == ch)
+      return (uint8_t*)ptr;
+  return NULL;
+}
+#endif  // _USE_WRITE_BUFFER
+
+size_t writeCallback(const uint8_t *buf, size_t len)
 {
+  size_t res = 0;
+#ifdef _USE_WRITE_BUFFER_STATS
+  if (writeCalls == 0)
+    firstWriteCall = micros();
+  writeCalls++;
+#endif  // _USE_WRITE_BUFFER_STATS
 #ifdef _USE_WRITE_BUFFER
-	if (!serverClient || !serverClient.connected())
-		return 0;
+  size_t  remain = len, bufpos = 0, wrote = 0;
 
-	size_t result = 0;
+#ifdef _USE_WRITE_BUFFER_DEBUG
+    Serial.println("");
+#endif  // _USE_WRITE_BUFFER_DEBUG
+  while (remain > 0) {
+    size_t copy = (remain > writeBufferSize - writeBufferCurrent ? writeBufferSize - writeBufferCurrent : remain);
+#ifdef _USE_WRITE_BUFFER_DEBUG
+    Serial.println("writeBufferCurrent: " + String(writeBufferCurrent) + ", remain: " + String(remain) + ", bufpos: " + String(bufpos) + ", copy: " + String(copy));
+//    dumpBuffer();
+#endif  // _USE_WRITE_BUFFER_DEBUG
 
-	while (len > 0) {
-		size_t copy = (len > writeBufferSize - writeBufferCurrent ? writeBufferSize - writeBufferCurrent : len);
-		if (copy > 0)
-		{
-			memcpy(writeBuffer + writeBufferCurrent, buf, copy);
-			writeBufferCurrent = writeBufferCurrent + copy;
-		}
-		// Buffer full or \n detected - force send
-		if ( (len == 1 && *buf == char(0xA)) || (writeBufferCurrent == writeBufferSize))
-		{
-			size_t byteswritten = 0;
-			if (serverClient && serverClient.connected())
-				byteswritten=serverClient.write((const uint8_t*)writeBuffer, writeBufferCurrent);
-				//byteswritten = serverClient.write(&writeBuffer[0], writeBufferCurrent);
+    // newline
+    void *newLine;
+    size_t newLinePos = 0;
+    if ((newLine = memchr2(&buf[bufpos], 10, copy)) != NULL) {
+      newLinePos = (size_t)newLine - (size_t)&buf[bufpos];
+#ifdef _USE_WRITE_BUFFER_DEBUG
+      Serial.println("writeCallback: newline @" + String(newLinePos));
+#endif  // _USE_WRITE_BUFFER_DEBUG
+      copy = newLinePos;
+    }
+     
+    // copy to buffer
+    memcpy(&writeBuffer[writeBufferCurrent], &buf[bufpos], copy);
+    writeBufferCurrent += copy;
+    bufpos += copy;
+    remain -= copy;
+    res += copy;
 
-			if (byteswritten < writeBufferCurrent) {
-				memmove(writeBuffer, writeBuffer+byteswritten, writeBufferCurrent - byteswritten);
-				writeBufferCurrent -= byteswritten;
-			} else {
-				writeBufferCurrent = 0;
-			}
-			result += byteswritten;
-		}
-		len = len - copy;
+    // newline detected - force send
+    if (newLinePos > 0)
+      wrote += writeFromBuffer(writeBufferCurrent);
 
-		// buffer full
-	}
-	return len;
-#else
-
-	while (!serverClient.available()) {
-		yield(); 
-		if (!serverClient.connected()) return 0;
-	}
-	DBG_PRINTLN("Called writeCallback");
-
-	memccpy()
-
-	return serverClient.write(buf, len);
-	//serverClient.write("test");
-#endif
+    // buffer full
+    if (writeBufferCurrent == writeBufferSize) {
+      wrote += writeFromBuffer(writeBufferCurrent);
+    }
+  }
+#ifdef _USE_WRITE_BUFFER_DEBUG
+//  dumpBuffer();
+  Serial.println("writeBufferCurrent: " + String(writeBufferCurrent) + ", wrote: " + String(wrote));
+#endif  // _USE_WRITE_BUFFER_DEBUG
+#else // _USE_WRITE_BUFFER
+  if (serverClient && serverClient.connected())
+    res = serverClient.write(buf, len);
+#endif // _USE_WRITE_BUFFER
+  
+  return res;
 }
 
+#ifdef _USE_WRITE_BUFFER
+size_t writeFromBuffer(size_t len) {
+  size_t res = 0;
+  unsigned long lastWriteCall;
+
+  if (serverClient && serverClient.connected())
+    res = serverClient.write(&writeBuffer[0], len);
+
+//  if (res > 0) {
+//#ifdef _USE_WRITE_BUFFER_DEBUG
+//    dumpBuffer();
+//#endif  // _USE_WRITE_BUFFER_DEBUG
+//  }
+
+  writeBufferCurrent = 0;
+
+#ifdef _USE_WRITE_BUFFER_STATS
+  if (res > 0) {
+    lastWriteCall = micros();
+    Serial.println("wrote: " + String(res) + " bytes, calls: " + writeCalls + ", elaps: " + String(lastWriteCall - firstWriteCall) + " us");
+    writeCalls = 0;
+  }
+#endif  // _USE_WRITE_BUFFER_STATS
+  
+  return res;
+}
+#endif  // _USE_WRITE_BUFFER
 
 //============================== IT_Send =========================================
 
@@ -721,21 +863,21 @@ void send_cmd()
 
 			if (ccParamAnz > 0 && ccParamAnz <= 5 && hasCC1101) {
 				uint8_t hex;
-				DBG_PRINTLN("write new ccreg  ");
-				for (uint8_t i = 0; i<ccParamAnz; i++)
+				DBG_PRINT("write new ccreg  ");
+				for (uint8_t i=0;i<ccParamAnz;i++)
 				{
 					ccReg[i] = cc1101::readReg(0x0d + i, 0x80);    // alte Registerwerte merken
-					hex = (uint8_t)msg_part.charAt(2 + i * 2);
+					hex = (uint8_t)msg_part.charAt(2 + i*2);
 					val = cc1101::hex2int(hex) * 16;
-					hex = (uint8_t)msg_part.charAt(3 + i * 2);
+					hex = (uint8_t)msg_part.charAt(3 + i*2);
 					val = cc1101::hex2int(hex) + val;
 					cc1101::writeReg(0x0d + i, val);            // neue Registerwerte schreiben
-					printHex2(val);
+					printHex2Dbg(val);
 				}
 				DBG_PRINTLN("");
 			}
 		}
-#endif
+#endif  // CMP_CC1101
 }
 
 #ifdef CMP_CC1101
@@ -772,13 +914,13 @@ void send_cmd()
 		for (uint8_t i = 0; i<ccParamAnz; i++)
 		{
 			val = ccReg[i];
-			printHex2(val);
+			printHex2Dbg(val);
 			cc1101::writeReg(0x0d + i, val);    // gemerkte Registerwerte zurueckschreiben
 		}
 		DBG_PRINTLN("");
 	}
-#endif
-
+#endif  // CMP_CC1101
+		
 	MSG_PRINTLN(cmdstring); // echo
 	musterDec.reset();
 	enableReceive();	// enable the receiver
@@ -841,13 +983,16 @@ void HandleCommand()
     if (hasCC1101) {
       MSG_PRINT(F("cc1101"));
       switch(cc1101::chipVersion()) {
-//      case 0x08:    // CC1101_VERSION 0x31
+        case 0x08:  // CC1101_VERSION 0x31
         case 0x18:  // CC1101_VERSION 0xF1
           MSG_PRINT(F(" 433MHz"));
           break;
         case 0x04:  // CC1101_VERSION 0x31
         case 0x14:  // CC1101_VERSION 0xF1
           MSG_PRINT(F(" 868MHz"));
+          break;
+        default:
+          MSG_PRINT(" chip unknown 0x" + String(cc1101::chipVersion(), HEX));
           break;
       }
     }
@@ -891,6 +1036,7 @@ void HandleCommand()
 		}
 		else if (cmdstring.charAt(1) == 'E' || cmdstring.charAt(1) == 'D') {  //Todo:  E und D sind auch hexadezimal, werden hier aber abgefangen
 			configCMD();
+      EEPROM.commit();
 		}
 		else if (cmdstring.charAt(1) == 'S') {
 			configSET();
@@ -1036,7 +1182,7 @@ inline void ethernetEvent()
 		if (!serverClient || !serverClient.connected()) {
 			if (serverClient) serverClient.stop();
 			serverClient = Server.available();
-			DBG_PRINTLN("New client: ");
+			DBG_PRINT("New client: ");
 			DBG_PRINTLN(serverClient.remoteIP());
 			return;
 		}
@@ -1185,6 +1331,12 @@ void printHex2(const byte hex) {   // Todo: printf oder scanf nutzen
     MSG_PRINT("0");
   }
   MSG_PRINT(hex, HEX);
+}
+void printHex2Dbg(const byte hex) {   // Todo: printf oder scanf nutzen
+  if (hex < 16) {
+    DBG_PRINT("0");
+  }
+  DBG_PRINT(hex, HEX);
 }
 #endif
 

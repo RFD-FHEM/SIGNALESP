@@ -36,19 +36,18 @@
 #else
 	#include "WProgram.h"
 #endif
-#define DEBUG 1
-
-//#define CMP_CC1101
 //#define DEBUG 1
 
+typedef size_t (*WriteCallback) (const uint8_t *buffer, size_t size);
+
 #ifndef WIFI_ESP
-#include <output.h>
+  #include <output.h>
 #else
-#include <ESP8266WiFi.h>
-extern WiFiClient serverClient;
-#define DBG_PRINTER Serial
-#define DBG_PRINT(...) { DBG_PRINTER.print(__VA_ARGS__); }
-#define DBG_PRINTLN(...) { DBG_PRINTER.println(__VA_ARGS__); }
+  #include <ESP8266WiFi.h>
+  extern WiFiClient serverClient;
+  #define DBG_PRINTER Serial
+  #define DBG_PRINT(...) { DBG_PRINTER.print(__VA_ARGS__); }
+  #define DBG_PRINTLN(...) { DBG_PRINTER.println(__VA_ARGS__); }
 #endif
 
 #define SDC_PRINT(...) {  write(__VA_ARGS__); }
@@ -67,23 +66,27 @@ extern WiFiClient serverClient;
 #define maxPulse 32001  // Magic Pulse Length
 
 
-#define SERIAL_DELIMITER  char(';')
-#define MSG_START char(0x2)		// this is a non printable Char
-#define MSG_END   char(0x3)			// this is a non printable Char
-
-//#define DEBUGDETECT 3
+#define SERIAL_DELIMITER  	uint8_t(';')
+#define MSG_START  			uint8_t(0x2)			// this is a non printable Char
+#define MSG_END  			uint8_t(0x3)			// this is a non printable Char
+//#define DEBUGDETECT 1
 //#define DEBUGDETECT 255  // Very verbose output
 //#define DEBUGDECODE 1
 
 enum status { searching, clockfound, syncfound, detecting };
 
-
-
 class SignalDetectorClass
 {
 	friend class ManchesterpatternDecoder;
 
+protected:
+	WriteCallback writeCallback = NULL;
+	
 public:
+	void registerWriteCallback(WriteCallback callback) {
+		writeCallback = callback;
+	};
+
 	SignalDetectorClass() : first(buffer), last(first + 1), message(4) { 
 																		 buffer[0] = 0; reset(); mcMinBitLen = 17; 	
 																		 MsMoveCount = 0; 
@@ -97,7 +100,7 @@ public:
 	typedef fastdelegate::FastDelegate2<const uint8_t*, uint8_t, size_t> Func2pRetuint8t;
 
 	void setRSSICallback(FuncRetuint8t callbackfunction) { _rssiCallback = callbackfunction; }
-	void setStreamCallback(Func2pRetuint8t callbackfunction) { _streamCallback = callbackfunction; }
+//	void setStreamCallback(Func2pRetuint8t callbackfunction) { _streamCallback = callbackfunction; }
 
 
 	//private:
@@ -137,9 +140,8 @@ public:
 	uint8_t mcMinBitLen;					// min bit Length
 	uint8_t rssiValue;						// Holds the RSSI value retrieved via a rssi callback
 	FuncRetuint8t _rssiCallback=NULL;		// Holds the pointer to a callback Function
-	Func2pRetuint8t _streamCallback=NULL;	// Holds the pointer to a callback Function
-	Stream *msgPort;						// Holds a pointer to a stream object for outputting
-
+//	Func2pRetuint8t _streamCallback;		// Holds the pointer to a callback Function
+//	Stream *msgPort;						// Holds a pointer to a stream object for outputting
 
 	void addData(const int8_t value);
 	void addPattern();
@@ -159,12 +161,11 @@ public:
 	size_t write(const uint8_t *buffer, size_t size);
 	size_t write(const char *str);
 	size_t write(uint8_t b);
+	size_t write(int i);
 
 	int8_t findpatt(const int val);              // Finds a pattern in our pattern store. returns -1 if te pattern is not found
 												 //bool validSequence(const int *a, const int *b);     // checks if two pulses are basically valid in terms of on-off signals
 	bool checkMBuffer();
-
-
 };
 
 class ManchesterpatternDecoder

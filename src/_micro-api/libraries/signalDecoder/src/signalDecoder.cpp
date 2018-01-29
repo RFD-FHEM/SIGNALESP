@@ -1,4 +1,4 @@
-/*
+﻿/*
 *   Pattern Decoder Library V3
 *   Library to decode radio signals based on patternd detection
 *   2014-2015  N.Butzek, S.Butzek
@@ -167,7 +167,7 @@ inline void SignalDetectorClass::doDetect()
 	}
 	else if (messageLen == minMessageLen) {
 		state = detecting;  // Set state to detecting, because we have more than minMessageLen data gathered, so this is no noise
-		if (_rssiCallback != NULL) 
+		if (_rssiCallback != NULL)	// don't call uninitialized function pointer
 			rssiValue = _rssiCallback();
 	}
 
@@ -233,8 +233,6 @@ inline void SignalDetectorClass::doDetect()
 		DBG_PRINT(", vcnt:");	DBG_PRINT(message.valcount);
 		DBG_PRINTLN(" ");
 #endif
-
-
 }
 
 bool SignalDetectorClass::decode(const int * pulse)
@@ -326,8 +324,8 @@ void SignalDetectorClass::compress_pattern()
 
 void SignalDetectorClass::processMessage()
 {
-	yield();
-	char buf[22] = {};
+//	yield();
+  char buf[22] = {};
 	uint8_t n = 0;
 
 	if (mcDetected == true || messageLen >= minMessageLen) {
@@ -425,7 +423,7 @@ void SignalDetectorClass::processMessage()
 						}
 						SDC_WRITE(patternIdx);
 						SDC_WRITE(patternLow);
-						SDC_WRITE(highByte(patternInt) | B10000000);
+						SDC_WRITE((uint8_t)(highByte(patternInt) | B10000000));
 						SDC_PRINT(SERIAL_DELIMITER);
 					}
 
@@ -448,14 +446,8 @@ void SignalDetectorClass::processMessage()
 						SDC_WRITE(n);
 					}
 
-					/*
-					SDC_PRINT(SERIAL_DELIMITER);
 					n = sprintf(buf, ";C%X;S%X;R%X;", clock, sync, rssiValue);
 					SDC_WRITE((const uint8_t *)buf, n);
-					*/
-					n = sprintf(buf, ";C%X;S%X;R%X;", clock, sync, rssiValue);
-					SDC_WRITE((const uint8_t *)buf, n);
-
 			    }
 				else {
 					SDC_PRINT("MS");  SDC_PRINT(SERIAL_DELIMITER);		
@@ -503,7 +495,7 @@ void SignalDetectorClass::processMessage()
 				}
 				
 				SDC_WRITE(MSG_END);
-				SDC_WRITE(char(0xA));
+				SDC_WRITE("\n");
 				
 				success = true;
 
@@ -620,18 +612,17 @@ void SignalDetectorClass::processMessage()
 						SDC_PRINT("SH="); SDC_PRINT(pattern[mcdecoder.shorthigh]); SDC_PRINT(SERIAL_DELIMITER);
 						*/
 						SDC_PRINT("D=");  mcdecoder.printMessageHexStr();
-
-						n = sprintf(buf, ";C=%i;L=%i;R=%i;", mcdecoder.clock, mcdecoder.ManchesterBits.valcount, rssiValue);
+						
+						n = sprintf(buf, ";C=%i;L=%i;R=%i;", clock, mcdecoder.ManchesterBits.valcount, rssiValue);
 						SDC_WRITE((const uint8_t *)buf, n);
 						/*
 						SDC_PRINT(SERIAL_DELIMITER);
 						SDC_PRINT("C="); SDC_PRINT(mcdecoder.clock); SDC_PRINT(SERIAL_DELIMITER);
 						SDC_PRINT("L="); SDC_PRINT(mcdecoder.ManchesterBits.valcount); SDC_PRINT(SERIAL_DELIMITER);
-						SDC_PRINT("R=");  SDC_PRINT(rssiValue); SDC_PRINT(SERIAL_DELIMITER);     // Signal Level (RSSI)
+	  					SDC_PRINT("R=");  SDC_PRINT(rssiValue); SDC_PRINT(SERIAL_DELIMITER);     // Signal Level (RSSI)
 						*/
 						SDC_WRITE(MSG_END);
-						SDC_WRITE(char(0xA));
-
+						SDC_WRITE("\n");
 
 #ifdef DEBUGDECODE
 						DBG_PRINTLN("");
@@ -687,7 +678,7 @@ void SignalDetectorClass::processMessage()
 						}
 						SDC_WRITE(patternIdx);
 						SDC_WRITE(patternLow);
-						SDC_WRITE(highByte(patternInt) | B10000000);
+						SDC_WRITE((uint8_t)(highByte(patternInt) | B10000000));
 						SDC_PRINT(SERIAL_DELIMITER);
 					}
 
@@ -707,6 +698,8 @@ void SignalDetectorClass::processMessage()
 					n = sprintf(buf, ";C%X;R%X;", clock, rssiValue);
 					SDC_WRITE((const uint8_t *)buf, n);
 
+					n = sprintf(buf, ";C%X;R%X;", clock, rssiValue);
+					SDC_WRITE((const uint8_t *) buf, n);
 				}
 				else {
 				
@@ -741,7 +734,7 @@ void SignalDetectorClass::processMessage()
 					SDC_PRINT("O");  SDC_PRINT(SERIAL_DELIMITER);
 				}
 				SDC_WRITE(MSG_END);  				
-				SDC_WRITE(char(0xA));
+				SDC_WRITE("\n");
 
 				
 				m_truncated = false;
@@ -888,9 +881,10 @@ void SignalDetectorClass::printOut()
 
 size_t SignalDetectorClass::write(const uint8_t *buf, size_t size)
 {
-	if (_streamCallback == NULL)
-		return 0;
-	return _streamCallback(buf, size);
+	return (writeCallback != NULL ? writeCallback(buf, size) : Serial.write(buf, size));
+	//if (_streamCallback == NULL)
+	//	return 0;
+	//return _streamCallback(buf, size);
 }
 
 
@@ -903,6 +897,10 @@ size_t SignalDetectorClass::write(const char *str) {
 inline size_t SignalDetectorClass::write(uint8_t b)
 {
 	return write(&b, 1);
+}
+
+size_t SignalDetectorClass::write(int i) {
+	return write(String(i).c_str());
 }
 
 int8_t SignalDetectorClass::findpatt(const int val)
@@ -946,7 +944,7 @@ void SignalDetectorClass::calcHisto(const uint8_t startpos, uint8_t endpos)
 	uint16_t bstartpos = startpos *4/8;
 	uint16_t bendpos = endpos*4 / 8;
 	uint8_t bval;
-	if (startpos % 2 == 1)  // ungerade
+	if ((startpos & 0x01) == 1)  // ungerade
 	{
 		message.getByte(bstartpos, &bval);
 		histo[bval & B00001111]++;
@@ -958,7 +956,7 @@ void SignalDetectorClass::calcHisto(const uint8_t startpos, uint8_t endpos)
 		histo[bval >> 4]++;
 		histo[bval & B00001111]++;
 	}
-	if (endpos % 2 == 1)
+	if ((endpos & 0x01) == 1)
 	{
 		message.getByte(bendpos, &bval);
 		histo[bval >> 4]++;
@@ -1378,13 +1376,6 @@ const bool ManchesterpatternDecoder::doDecode() {
 		}
 		
 		const uint8_t mpi = pdec->message[i]; // Store pattern for further processing
-		/*
-		if (mc_start_found == false && mc_sync && (isShort(mpi) || isLong(mpi)))
-		{
-			pdec->mstart = i;
-			mc_start_found = true;
-		}
-		*/
 		// Decoding occures here
 		if (mc_sync && mc_start_found)
 		{
@@ -1776,7 +1767,7 @@ const bool ManchesterpatternDecoder::isManchester()
 					if (seq < 10) seq += 100;
 					
 					int8_t *seqptr;
-					if (z % 2 == 0)  //Every even value
+					if ((z & 0x01) == 0)  //Every even value
 						seqptr = sequence_even;
 					else
 						seqptr = sequence_odd;

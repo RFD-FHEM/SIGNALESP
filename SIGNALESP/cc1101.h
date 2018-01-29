@@ -1,4 +1,4 @@
-// cc1101.h
+﻿// cc1101.h
 
 #ifndef _CC1101_h
 #define _CC1101_h
@@ -190,6 +190,11 @@ namespace cc1101 {
 		0x41, // 27 RCCTRL1
 		0x00, // 28 RCCTRL0
 	};
+  
+// prototypes
+#ifdef _CC1101_DEBUG_CONFIG
+  void dumpConfigRegister();
+#endif
   
 	byte hex2int(byte hex) {    // convert a hexdigit to int    // Todo: printf oder scanf nutzen
 		if (hex >= '0' && hex <= '9') hex = hex - '0';
@@ -510,7 +515,11 @@ namespace cc1101 {
 		DBG_PRINTLN("POR Done");
 		delay(10);
 
-		cc1101_Select();
+#ifdef _CC1101_DEBUG_CONFIG
+    dumpConfigRegister();
+#endif
+
+    cc1101_Select();
 		
 		sendSPI(CC1100_WRITE_BURST);
 		for (uint8_t i = 0; i<sizeof(initVal); i++) {              // write EEPROM value to cc11001
@@ -525,6 +534,18 @@ namespace cc1101 {
 		setReceiveMode();
 	}
 
+#ifdef _CC1101_DEBUG_CONFIG
+  void dumpConfigRegister() {
+    Serial.printf("\ndump config register:\n");
+    for (byte i=0; i<sizeof(initVal); i++) {
+      Serial.printf("%02X ", readReg(i, CC1101_CONFIG));
+      if (i % 16 == 15)
+        Serial.printf("\n");
+    }
+    Serial.printf("\n");
+  }
+#endif
+  
 	bool regCheck()
 	{
 		
