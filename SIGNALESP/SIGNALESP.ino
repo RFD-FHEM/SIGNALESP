@@ -95,9 +95,9 @@ uint8_t rssiCallback() { return 0; }; // Dummy return if no rssi value can be re
 size_t writeCallback(const uint8_t *buf,uint8_t len);
 
 //default custom static IP
-char static_ip[16] = "10.22.0.200";
+char static_ip[16] = "0.0.0.0";
 char static_gw[16] = "0.0.0.0";
-char static_sn[16] = "255.255.255.0";
+char static_sn[16] = "0.0.0.0";
 
 const char sos_sequence[] = "0101010001110001110001110001010100000000";
 const char boot_sequence[] = "00010100111";
@@ -134,8 +134,7 @@ bool startWPS() {
 		if (newSSID.length() > 0) {
 			// WPSConfig has already connected in STA mode successfully to the new station. 
 			Serial.printf("WPS finished. Connected successfull to SSID '%s'\n", newSSID.c_str());
-		}
-		else {
+		} else {
 			wpsSuccess = false;
 		}
 	}
@@ -155,83 +154,53 @@ void saveConfigCallback() {
 }
 
 void setup() {
+	char cfg_ipmode[7] = "dhcp";
+
+
 	//ESP.wdtEnable(2000);
 
 	os_timer_setfn(&blinksos, &sosBlink, (void *)boot_sequence);
 	os_timer_arm(&blinksos, 300, true);
+	WiFi.setAutoConnect(false);
 
-  Serial.begin(115200);
-  Serial.setDebugOutput(true);
-  while (!Serial)
-    delay(90);
 
-  Serial.println("\n\n");
+	Serial.begin(115200);
+	Serial.setDebugOutput(true);
+	while (!Serial)
+		delay(90);
 
-  pinMode(PIN_RECEIVE, INPUT);
-  pinMode(PIN_LED, OUTPUT);
+	Serial.println("\n\n");
+
+	pinMode(PIN_RECEIVE, INPUT);
+	pinMode(PIN_LED, OUTPUT);
   
-#ifdef CMP_CC1101
-  cc1101::setup();
-#endif
+	#ifdef CMP_CC1101
+	cc1101::setup();
+	#endif
 
-  initEEPROM();
+	initEEPROM();
 
-#ifdef CMP_CC1101
-  cc1101::CCinit();
-  hasCC1101 = cc1101::checkCC1101();
-  if (hasCC1101) {
-      DBG_PRINTLN("CC1101 found");
-      musterDec.setRSSICallback(&cc1101::getRSSI);                    // Provide the RSSI Callback
-  } else 
+	#ifdef CMP_CC1101
+	cc1101::CCinit();
+	hasCC1101 = cc1101::checkCC1101();
+	if (hasCC1101) {
+	  DBG_PRINTLN("CC1101 found");
+	  musterDec.setRSSICallback(&cc1101::getRSSI);                    // Provide the RSSI Callback
+	} else 
 #endif
 	musterDec.setRSSICallback(&rssiCallback); // Provide the RSSI Callback    
 
-												/*
-  #ifdef DEBUG
-    Serial.printf("\nTry connecting to WiFi with SSID '%s'\n", WiFi.SSID().c_str());
-  #endif
+	WiFiManager wifiManager;
 
-	if (WiFi.SSID().length() > 0 )
-	{
+/*
+		1. starts a config portal in access point mode (timeout 60 seconds)
+		2. Ii config portal times out, try connecting to a previous stored ssid in client mode
+		3. if no connection is possible, start wps mode 
+		If wps connection is successfull, ip address is retrieved via dhcp and saved. Otherwise esp is reseted and we start at 1. again  
 
-		WiFi.mode(WIFI_STA);
-		WiFi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // reading data from EPROM, 
-		while (WiFi.status() == WL_DISCONNECTED) {          // last saved credentials
-			delay(500);
-			Serial.print(".");
-		}
-	}
-  wl_status_t status = WiFi.status();
-  if (status == WL_CONNECTED) {
-  #ifdef DEBUG 
-	   Serial.printf("\nConnected successful to SSID '%s'\n", WiFi.SSID().c_str());
-  #endif
-  }  else {
-	Serial.printf("\nCould not connect to WiFi. state='%d'\n", status);
-	Serial.println("Please press WPS button on your router");
-	delay(5000);
-	if (!startWPS()) {
-		Serial.println("Failed to connect with WPS :-(");
-	}
-	else 
-	{
-		WiFi.begin(WiFi.SSID().c_str(), WiFi.psk().c_str()); // reading data from EPROM, 
-		while (WiFi.status() == WL_DISCONNECTED) {          // last saved credentials
-			delay(500);
-			Serial.print("."); // show wait for connect to AP
-				
-		}
-		#ifdef DEBUG
-		Serial.print("\nReady! Use 'telnet ");
-		Serial.print(WiFi.localIP());
-		Serial.println(" port 23' to connect");
-		#endif
-
-	}
-
-
-  }
- */
+		ip configuration can be switched between static and dhcp mode
+*/
+	IPAddress _ip, _gw, _sn;
 
 	DBG_PRINTLN("mounting FS...");
 
@@ -253,21 +222,34 @@ void setup() {
 				json.printTo(Serial);
 				if (json.success()) {
 					DBG_PRINTLN("\nparsed json");
-					if (json["ip"]) {
-						DBG_PRINTLN("setting custom ip from config");
-						//static_ip = json["ip"];
-						strcpy(static_ip, json["ip"]);
-						strcpy(static_gw, json["gateway"]);
-						strcpy(static_sn, json["subnet"]);
-						DBG_PRINTLN(static_ip);
+					strcpy(cfg_ipmode, json["ipmode"]);
+					if (strcmp(cfg_ipmode, "static")==0)
+					{
+						DBG_PRINT("ipmode: ");
+						DBG_PRINTLN(cfg_ipmode);
+						if (json["ip"]) {
+							//DBG_PRINTLN("load custom ip from config");
+							strcpy(static_ip, json["ip"]);
+							strcpy(static_gw, json["gateway"]);
+							strcpy(static_sn, json["subnet"]);
+							//DBG_PRINTLN(static_ip);
+
+							//  Load static IP to display them in the config portal
+							_ip.fromString(static_ip);
+							_gw.fromString(static_gw);
+							_sn.fromString(static_sn);
+							DBG_PRINTLN("apply static ip from config");
+							wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn);
+
+						} else {
+							DBG_PRINTLN("no custom ip in config");
+						}
 					}
-					else {
-						DBG_PRINTLN("no custom ip in config");
-					}
-				}
-				else {
+				} else {
 					DBG_PRINTLN("failed to load json config");
 				}
+				buf.release();
+
 			}
 			configFile.close();
 		}
@@ -277,36 +259,38 @@ void setup() {
 	}
 	//end read
 
-	WiFiManager wifiManager;
-
-	//wifiManager.setBreakAfterConfig(true);
-	//reset settings - for testing
-	//wifiManager.resetSettings();
- 
-	//tries to connect to last known settings
-	//if it does not connect it starts an access point with the specified name
-	//here  "NodeDuino" with no password
-	//and goes into a blocking loop awaiting configuration
+	//Todo: Add custom html code to better explain how this input field works
+	WiFiManagerParameter custom_ipconfig("ipmode", "static or dhcp", cfg_ipmode, 7);
+	wifiManager.addParameter(&custom_ipconfig);
 
 	wifiManager.setConfigPortalTimeout(60);
 	wifiManager.setSaveConfigCallback(saveConfigCallback);
+	//wifiManager.setBreakAfterConfig(true); // Exit the config portal even if there is a wrong config
 
-	IPAddress _ip, _gw, _sn;
+	bool wps_successfull=false;
+	Serial.println("Starting config portal with SSID: NodeDuinoConfig");
+	if (!wifiManager.startConfigPortal("NodeDuinoConfig", NULL)) {
 
-	_ip.fromString(static_ip);
-	_gw.fromString(static_gw);
-	_sn.fromString(static_sn);
-	wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn);
-
-
-	if (!wifiManager.startConfigPortal()) {
-
-		Serial.println("failed to connect, we now enter WPS Mode");
-		delay(3000);
-		os_timer_disarm(&blinksos);
-		os_timer_setfn(&blinksos, &sosBlink, (void *)sos_sequence);
-		os_timer_arm(&blinksos, 300, true);
-
+		wifiManager.setConfigPortalTimeout(1);
+		if (wifiManager.autoConnect()) {
+			//if you get here you have connected to the WiFi
+			Serial.println("connected...)");
+			Serial.println("local ip");
+			Serial.println(WiFi.localIP());
+			os_timer_disarm(&blinksos);
+			// Blink if we have a connection
+			for (int i = 0; i < 10; i++)
+			{
+				digitalHigh(PIN_LED);
+				delay(1000);
+				digitalLow(PIN_LED);
+			}
+		} else {
+			Serial.println("failed to connect, we now enter WPS Mode");
+			delay(3000);
+			os_timer_disarm(&blinksos);
+			os_timer_setfn(&blinksos, &sosBlink, (void *)sos_sequence);
+			os_timer_arm(&blinksos, 300, true);
 
 			Serial.printf("\nCould not connect to WiFi. state='%d'\n", WiFi.status());
 			Serial.println("Please press WPS button on your router");
@@ -315,58 +299,69 @@ void setup() {
 				Serial.println("Failed to connect with WPS, will restart ESP now :-(");
 				delay(3500);
 
-				while (1);
-				//ESP.restart();
-				//ESP.reset();
+				//while (1);
+				ESP.restart();
+				ESP.reset();
 			}
-
-		delay(5000);
+			strcpy(cfg_ipmode, "dhcp");
+			wps_successfull = true;
+			shouldSaveConfig = true;
+			delay(5000);
+		}
 	}
-	else {
-		if (shouldSaveConfig)
-			wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn);
-	}
+	if (shouldSaveConfig)
+	{
+		DBG_PRINTLN("saving config");
+		DynamicJsonBuffer jsonBuffer;
+		JsonObject& json = jsonBuffer.createObject();
+		char old_cfg_ipmode[7];
+		strcpy(old_cfg_ipmode, cfg_ipmode);
 
-	if (WiFi.status() == WL_CONNECTED) {          // last saved credentials
+		if (wps_successfull == false) {
+			json["ipmode"] = custom_ipconfig.getValue();
+			strcpy(cfg_ipmode, json["ipmode"]);
+		} else
+			json["ipmode"] = cfg_ipmode;
 
-	  //if you get here you have connected to the WiFi
-		Serial.println("connected...)");
-
-
-		Serial.println("local ip");
-		Serial.println(WiFi.localIP());
-
-		if (shouldSaveConfig) {
-			DBG_PRINTLN("saving config");
-			DynamicJsonBuffer jsonBuffer;
-			JsonObject& json = jsonBuffer.createObject();
-
+		if (strcmp(cfg_ipmode,"static")==0)
+		{
+			DBG_PRINTLN("saving static ip config");
 			json["ip"] = WiFi.localIP().toString();
 			json["gateway"] = WiFi.gatewayIP().toString();
 			json["subnet"] = WiFi.subnetMask().toString();
 
-			File configFile = SPIFFS.open("/config.json", "w");
-			if (!configFile) {
-				DBG_PRINTLN("failed to open config file for writing");
-			}
-
-			json.prettyPrintTo(Serial);
-			json.printTo(configFile);
-			configFile.close();
-			//end save
+			strcpy(static_ip, json["ip"]);
+			strcpy(static_gw, json["gateway"]);
+			strcpy(static_sn, json["subnet"]);
 		}
-		os_timer_disarm(&blinksos);
+		File configFile = SPIFFS.open("/config.json", "w");
+		if (!configFile) {
+			DBG_PRINTLN("failed to open config file for writing");
+		}
 
-		// Blink if we have a connection
-		for (int i = 0; i < 10; i++)
+		json.prettyPrintTo(Serial);
+		json.printTo(configFile);
+		configFile.close();
+		if (strcmp(cfg_ipmode,"dhcp") == 0 && strcmp(old_cfg_ipmode,"dhcp") != 0)
 		{
-			digitalHigh(PIN_LED);
+			Serial.println("Reenable DHCP client mode. Restarting ESP now");
 			delay(1000);
-			digitalLow(PIN_LED);
+			ESP.restart(); // Reset ESP to re-enable DHCP mode
+			ESP.reset();
+			//Todo: Store in eeprom that we restarted so we can skip configportal for one reboot
+
 		}
-
-
+		if (strcmp(cfg_ipmode,"static") == 0) {
+			_ip.fromString(static_ip);
+			_gw.fromString(static_gw);
+			_sn.fromString(static_sn);
+			DBG_PRINTLN("update static ip from config");
+			wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn); // This should disable static ip mode for wifimanger and allow dhcp again	}
+		}
 	}
+
+
+
 	Server.setNoDelay(true);
 	Server.begin();  // telnet server
 
@@ -384,14 +379,13 @@ void setup() {
 	enableReceive();
     DBG_PRINTLN(F("receiver enabled"));
 #ifdef CMP_CC1101
-  } else {
-    DBG_PRINTLN(F("cc1101 is not correctly set. Please do a factory reset via command e"));
-  }
+	} else {
+		DBG_PRINTLN(F("cc1101 is not correctly set. Please do a factory reset via command e"));
+	}
 #endif
 
 	cmdstring.reserve(40);
-
-
+	
 }
 
 void ICACHE_RAM_ATTR cronjob(void *pArg) {
