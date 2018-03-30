@@ -1,7 +1,6 @@
 
-
 #define PROGNAME               "RF_RECEIVER-ESP"
-#define PROGVERS               "3.3.1-rc4"
+#define PROGVERS               "3.3.1-rc5"
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
 
@@ -21,16 +20,19 @@
 
 
 #define ETHERNET_PRINT
+#define WIFI_MANAGER_OVERRIDE_STRINGS
+
+
+
+
+
 #include <FS.h>   
 #include <EEPROM.h>
 #include <ESP8266WiFi.h>
 #include <DNSServer.h>            //Local DNS Server used for redirecting all requests to the configuration portal
 #include <ESP8266WebServer.h>     //Local WebServer used to serve the configuration portal
-#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
-#include <ArduinoJson.h>
+#include <ArduinoJson.h>     //Local WebServer used to serve the configuration portal
 
-WiFiServer Server(23);  //  port 23 = telnet
-WiFiClient serverClient;
 
 #include <output.h>
 #include <bitstore.h>  // Die wird aus irgend einem Grund zum Compilieren benoetigt.
@@ -39,13 +41,19 @@ WiFiClient serverClient;
 SimpleFIFO<int, FIFO_LENGTH> FiFo; //store FIFO_LENGTH # ints
 #include <signalDecoder.h>
 #include <FastDelegate.h> 
-SignalDetectorClass musterDec;
+#define WIFI_MANAGER_OVERRIDE_STRINGS
+#include "wifi-config.h"
+#include <WiFiManager.h>          //https://github.com/tzapu/WiFiManager
 
 
 #ifdef CMP_CC1101
 #include "cc1101.h"
 #include <SPI.h>      // prevent travis errors
 #endif
+WiFiServer Server(23);  //  port 23 = telnet
+WiFiClient serverClient;
+
+SignalDetectorClass musterDec;
 
 #define pulseMin  90
 volatile bool blinkLED = false;
@@ -94,10 +102,6 @@ void getFunctions(bool *ms, bool *mu, bool *mc);
 uint8_t rssiCallback() { return 0; }; // Dummy return if no rssi value can be retrieved from receiver
 size_t writeCallback(const uint8_t *buf,uint8_t len);
 
-//default custom static IP
-char static_ip[16] = "0.0.0.0";
-char static_gw[16] = "0.0.0.0";
-char static_sn[16] = "0.0.0.0";
 
 const char sos_sequence[] = "0101010001110001110001110001010100000000";
 const char boot_sequence[] = "00010100111";
@@ -118,40 +122,11 @@ void ICACHE_RAM_ATTR sosBlink (void *pArg) {
 }
 
 
-bool startWPS() {
-	// from https://gist.github.com/copa2/fcc718c6549721c210d614a325271389
-	// wpstest.ino
-	Serial.println("WPS config start");
-	WiFi.disconnect();
-	WiFi.mode(WIFI_STA); // WPS only works in station mode
-	digitalHigh(PIN_LED);
-
-	delay(1000);
-	bool wpsSuccess = WiFi.beginWPSConfig();
-	if (wpsSuccess) {
-		// Well this means not always success :-/ in case of a timeout we have an empty ssid
-		String newSSID = WiFi.SSID();
-		if (newSSID.length() > 0) {
-			// WPSConfig has already connected in STA mode successfully to the new station. 
-			Serial.printf("WPS finished. Connected successfull to SSID '%s'\n", newSSID.c_str());
-		} else {
-			wpsSuccess = false;
-		}
-	}
-	digitalLow(PIN_LED);
-
-	return wpsSuccess;
-}
 
 
-//flag for saving data
-bool shouldSaveConfig = false;
 
 //callback notifying us of the need to save config
-void saveConfigCallback() {
-	DBG_PRINTLN("Should save config");
-	shouldSaveConfig = true;
-}
+WiFiManager wifiManager;
 
 void setup() {
 	char cfg_ipmode[7] = "dhcp";
@@ -161,8 +136,8 @@ void setup() {
 
 	os_timer_setfn(&blinksos, &sosBlink, (void *)boot_sequence);
 	os_timer_arm(&blinksos, 300, true);
-	WiFi.setAutoConnect(false);
-
+//	WiFi.setAutoConnect(false);
+	WiFi.mode(WIFI_STA);
 
 	Serial.begin(115200);
 	Serial.setDebugOutput(true);
@@ -190,7 +165,7 @@ void setup() {
 #endif
 	musterDec.setRSSICallback(&rssiCallback); // Provide the RSSI Callback    
 
-	WiFiManager wifiManager;
+	wifiManager.setShowStaticFields(true);
 
 /*
 		1. starts a config portal in access point mode (timeout 60 seconds)
@@ -203,7 +178,7 @@ void setup() {
 	IPAddress _ip, _gw, _sn;
 
 	DBG_PRINTLN("mounting FS...");
-
+	/*
 	if (SPIFFS.begin()) {
 		DBG_PRINTLN("mounted file system");
 		if (SPIFFS.exists("/config.json")) {
@@ -258,17 +233,20 @@ void setup() {
 		DBG_PRINTLN("failed to mount FS");
 	}
 	//end read
+	*/
 
 	//Todo: Add custom html code to better explain how this input field works
-	WiFiManagerParameter custom_ipconfig("ipmode", "static or dhcp", cfg_ipmode, 7);
-	wifiManager.addParameter(&custom_ipconfig);
+	
+	//WiFiManagerParameter custom_ipconfig("ipmode", "static or dhcp", cfg_ipmode, 7);
+	//wifiManager.addParameter(&custom_ipconfig);
 
-	wifiManager.setConfigPortalTimeout(60);
-	wifiManager.setSaveConfigCallback(saveConfigCallback);
+	//wifiManager.setConfigPortalTimeout(60);
+	//wifiManager.setSaveConfigCallback(saveConfigCallback);
 	//wifiManager.setBreakAfterConfig(true); // Exit the config portal even if there is a wrong config
 
 	bool wps_successfull=false;
 	Serial.println("Starting config portal with SSID: NodeDuinoConfig");
+	/*
 	if (!wifiManager.startConfigPortal("NodeDuinoConfig", NULL)) {
 
 		wifiManager.setConfigPortalTimeout(1);
@@ -309,6 +287,9 @@ void setup() {
 			delay(5000);
 		}
 	}
+	*/
+	wifiManager.autoConnect("NodeDuinoConfig",NULL);
+	/*
 	if (shouldSaveConfig)
 	{
 		DBG_PRINTLN("saving config");
@@ -359,8 +340,7 @@ void setup() {
 			wifiManager.setSTAStaticIPConfig(_ip, _gw, _sn); // This should disable static ip mode for wifimanger and allow dhcp again	}
 		}
 	}
-
-
+	*/
 
 	Server.setNoDelay(true);
 	Server.begin();  // telnet server
@@ -384,8 +364,11 @@ void setup() {
 	}
 #endif
 
+//	WiFi.mode(WIFI_STA);
 	cmdstring.reserve(40);
-	
+	wifiManager.setConfigPortalBlocking( false);
+//	wifiManager.startConfigPortal();
+	wifiManager.startWebPortal();
 }
 
 void ICACHE_RAM_ATTR cronjob(void *pArg) {
@@ -397,6 +380,9 @@ void ICACHE_RAM_ATTR cronjob(void *pArg) {
 uint8_t fifousage = 0;
 
 void loop() {
+	wifiManager.process();
+	
+
 	static int aktVal = 0;
 	bool state;
 	serialEvent();

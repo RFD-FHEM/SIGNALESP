@@ -57,5 +57,8 @@
     <ClCompile Include="..\src\_micro-api\libraries\WIFIManager\WiFiManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="wifi-config.h">
+      <Filter>Header Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
