@@ -1,7 +1,10 @@
 // output.h
 
+#ifndef _OUTPUT_h
+#define _OUTPUT_h
+
 #ifndef ESP8266
-	#ifdef ARDUINO_AVR_ICT_BOARDS_ICT_BOARDS_AVR_RADINOCC1101
+	#ifdef ARDUINO_RADINOCC1101
 		#define portOfPin(P) \
 		((((P) >= 0 && (P) <= 4) || (P) == 6 || (P) == 12 || (P) == 24 || (P) == 25 || (P) == 29) ? &PORTD : (((P) == 5 || (P) == 13) ? &PORTC : (((P) >= 18 && (P) <= 23)) ? &PORTF : (((P) == 7) ? &PORTE : &PORTB)))
 		#define ddrOfPin(P) \
@@ -20,15 +23,22 @@
 		#define pinIndex(P)((uint8_t)(P>13?P-14:P&7))
 	#endif
 
-	#define pinMask(P)((uint8_t)(1<<pinIndex(P)))
-	#define pinAsInput(P) *(ddrOfPin(P))&=~pinMask(P)
-	#define pinAsInputPullUp(P) *(ddrOfPin(P))&=~pinMask(P);digitalHigh(P)
-	#define pinAsOutput(P) *(ddrOfPin(P))|=pinMask(P)
-	#define digitalLow(P) *(portOfPin(P))&=~pinMask(P)
-	#define digitalHigh(P) *(portOfPin(P))|=pinMask(P)
-	#define isHigh(P)((*(pinOfPin(P))& pinMask(P))>0)
-	#define isLow(P)((*(pinOfPin(P))& pinMask(P))==0)
-	#define digitalState(P)((uint8_t)isHigh(P))
+	#if defined(WIN32) || defined(__linux__)
+		#define digitalLow(P) pinMode(P,LOW)
+		#define digitalHigh(P) pinMode(P,HIGH)
+
+	#else
+		#define pinMask(P)((uint8_t)(1<<pinIndex(P)))
+		#define pinAsInput(P) *(ddrOfPin(P))&=~pinMask(P)
+		#define pinAsInputPullUp(P) *(ddrOfPin(P))&=~pinMask(P);digitalHigh(P)
+		#define pinAsOutput(P) *(ddrOfPin(P))|=pinMask(P)
+		#define digitalLow(P) *(portOfPin(P))&=~pinMask(P)
+		#define digitalHigh(P) *(portOfPin(P))|=pinMask(P)
+		#define isHigh(P)((*(pinOfPin(P))& pinMask(P))>0)
+		#define isLow(P)((*(pinOfPin(P))& pinMask(P))==0)
+		#define digitalState(P)((uint8_t)isHigh(P))
+	#endif
+
 #else
 	#define pinAsInput(pin) pinMode(pin, INPUT)
 	#define pinAsOutput(pin) pinMode(pin, OUTPUT)
@@ -47,13 +57,11 @@
 
 //#define DEBUG
 
-#ifndef _OUTPUT_h
-#define _OUTPUT_h
 
 #if defined(ARDUINO) && ARDUINO >= 100
 	#include "Arduino.h"
 #else
-	#include "WProgram.h"
+//	#include "WProgram.h"
 #endif
 
 #ifdef ETHERNET_PRINT
@@ -89,3 +97,4 @@ extern WiFiClient serverClient;
 
 
 #endif
+
