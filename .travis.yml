@@ -9,7 +9,7 @@ before_install:
 - sudo mv arduino-1.6.13 /usr/local/share/arduino
 - sudo ln -s /usr/local/share/arduino/arduino /usr/local/bin/arduino
 install:
-- git clone http://github.com/tzapu/WiFiManager.git /usr/local/share/arduino/libraries/WIFIManager
+- git clone --branch ota http://github.com/tzapu/WiFiManager.git /usr/local/share/arduino/libraries/WIFIManager
 - arduino --pref "boardsmanager.additional.urls=http://arduino.esp8266.com/stable/package_esp8266com_index.json"
   --save-prefs
 - git clone https://github.com/bblanchon/ArduinoJson /usr/local/share/arduino/libraries/ArduinoJson
