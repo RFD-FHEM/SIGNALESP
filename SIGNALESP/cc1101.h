@@ -13,17 +13,17 @@
 
 extern char IB_1[14];
 
-#define CMP_CC1101
+//#define CMP_CC1101
 
 #ifdef ESP8266
 	#include <SPI.h>
 
-	#define CMP_CC1101
+	//#define CMP_CC1101
 
 	#ifdef CMP_CC1101
 	#define PIN_RECEIVE           5// D1
 	#else
-	#define PIN_RECEIVE            2
+	#define PIN_RECEIVE            5
 	#endif
 
 	#define PIN_LED                16
