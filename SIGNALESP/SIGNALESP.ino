@@ -3,12 +3,12 @@
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
 
-#define CMP_CC1101
+//#define CMP_CC1101
 
 #ifdef CMP_CC1101
 	#define PIN_RECEIVE           5// D1
 #else
-	#define PIN_RECEIVE            2
+	#define PIN_RECEIVE            5
 #endif
 
 #define PIN_LED                16
@@ -297,6 +297,7 @@ void setup() {
 	}
 	*/
 	wifiManager.autoConnect("NodeDuinoConfig",NULL);
+
 	/*
 	if (shouldSaveConfig)
 	{
@@ -363,11 +364,11 @@ void setup() {
 
 	if (!hasCC1101 || cc1101::regCheck()) {
 		enableReceive();
-		DBG_PRINTLN(TXT_RECENA);
+		DBG_PRINT(FPSTR(TXT_RECENA));
 	}
 	else {
-		DBG_PRINT(TXT_CC1101)
-		DBG_PRINTLN(TXT_DOFRESET);
+		DBG_PRINT(FPSTR(TXT_CC1101));
+		DBG_PRINTLN(FPSTR(TXT_DOFRESET));
 	}
 	MSG_PRINTER.setTimeout(400);
 

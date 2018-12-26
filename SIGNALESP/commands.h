@@ -67,13 +67,13 @@ namespace commands {
 
 	inline void getConfig()
 	{
-		MSG_PRINT(TXT_MS); MSG_PRINT(TXT_EQ);
+		MSG_PRINT(FPSTR(TXT_MS)); MSG_PRINT(FPSTR(TXT_EQ));
 		MSG_PRINT(musterDec.MSenabled, DEC);
-		MSG_PRINT(TXT_FSEP); MSG_PRINT(TXT_MU); MSG_PRINT(TXT_EQ);
+		MSG_PRINT(FPSTR(TXT_FSEP)); MSG_PRINT(FPSTR(TXT_MU)); MSG_PRINT(FPSTR(TXT_EQ));
 		MSG_PRINT(musterDec.MUenabled, DEC);
-		MSG_PRINT(TXT_FSEP); MSG_PRINT(TXT_MC); MSG_PRINT(TXT_EQ);
+		MSG_PRINT(FPSTR(TXT_FSEP)); MSG_PRINT(FPSTR(TXT_MC)); MSG_PRINT(FPSTR(TXT_EQ));
 		MSG_PRINT(musterDec.MCenabled, DEC);
-		MSG_PRINT(TXT_FSEP); MSG_PRINT("Mred"); MSG_PRINT(TXT_EQ);
+		MSG_PRINT(FPSTR(TXT_FSEP)); MSG_PRINT("Mred"); MSG_PRINT(FPSTR(TXT_EQ));
 		MSG_PRINTLN(musterDec.MredEnabled, DEC);
 	}
 
@@ -167,7 +167,7 @@ namespace commands {
 		case cmd_Version:
 			MSG_PRINT("V " PROGVERS " SIGNALduino ");
 			if (hasCC1101) {
-				MSG_PRINT(TXT_CC1101);
+				MSG_PRINT(FPSTR(TXT_CC1101));
 #ifdef PIN_MARK433
 				MSG_PRINT("(");
 				MSG_PRINT(isLow(PIN_MARK433) ? "433" : "868");
@@ -177,11 +177,11 @@ namespace commands {
 					//      case 0x08:    // CC1101_VERSION 0x31
 					case 0x18:  // CC1101_VERSION 0xF1
 
-						MSG_PRINT(" ");	MSG_PRINT(TXT_433); MSG_PRINT(TXT_MHZ);
+						MSG_PRINT(cmd_space);	MSG_PRINT(FPSTR(TXT_433)); MSG_PRINT(FPSTR(TXT_MHZ));
 						break;
 					case 0x04:  // CC1101_VERSION 0x31
 					case 0x14:  // CC1101_VERSION 0xF1
-						MSG_PRINT(" ");	MSG_PRINT(TXT_868); MSG_PRINT(TXT_MHZ);
+						MSG_PRINT(cmd_space);	MSG_PRINT(FPSTR(TXT_868)); MSG_PRINT(FPSTR(TXT_MHZ));
 						break;
 				}
 #endif
@@ -231,21 +231,21 @@ namespace commands {
 				char b[3];
 				sprintf(b, "%02X", val);
 				MSG_PRINT(b);
-				MSG_PRINTLN(TXT_TPATAB);
+				MSG_PRINTLN(FPSTR(TXT_TPATAB));
 			}
 
 		case cmd_read:
 			// R<adr>  read EEPROM
 			if (isHexadecimalDigit(IB_1[1]) && isHexadecimalDigit(IB_1[2]) && hasCC1101) {
 				const uint8_t reg = (uint8_t)strtol(IB_1+1, nullptr, 16);
-				MSG_PRINT(F("EEPROM "));
+				MSG_PRINT("EEPROM ");
 
 				char b[3];
 				sprintf(b, "%2X", reg);
 				MSG_PRINT(b);
 
 				if (IB_1[3] == 'n') {
-					MSG_PRINT(F(" :"));
+					MSG_PRINT(FPSTR(" :"));
 					for (uint8_t i = 0; i < 16; i++) {
 						const uint8_t val = EEPROM.read(reg + i);
 						sprintf(b, " %02X", val);
@@ -253,7 +253,7 @@ namespace commands {
 					}
 				}
 				else {
-					MSG_PRINT(F(" = "));
+					MSG_PRINT(FPSTR(" = "));
 					const uint8_t val = EEPROM.read(reg);
 					sprintf(b, " %02X", val);
 					MSG_PRINT(b);

@@ -239,16 +239,16 @@ extraDelay = false;
 			} while (msg_endptr[0] != ';' && msg_endptr[0] != '\n' && buffer_left > 0);
 			if (l == 0)
 			{
-				MSG_PRINT(TXT_SENDCMD);
-				MSG_PRINTLN(TXT_CORRUPT);
+				MSG_PRINT(FPSTR(TXT_SENDCMD));
+				MSG_PRINTLN(FPSTR(TXT_CORRUPT));
 				return;
 			}
 			if (buffer_left == 0)
 			{
 				delayMicroseconds(300);
 				MSG_PRINTER.readBytesUntil('\n', buf, 255);
-				MSG_PRINT(TXT_SENDCMD);
-				MSG_PRINTLN(TXT_TOLONG);
+				MSG_PRINT(FPSTR(TXT_SENDCMD));
+				MSG_PRINTLN(FPSTR(TXT_TOLONG));
 				return;
 			}
 			*(msg_endptr + 1) = '\0'; // Nullterminate the string
