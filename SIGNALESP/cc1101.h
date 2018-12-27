@@ -8,26 +8,17 @@
 #else
 //	#include "WProgram.h"
 #endif
+#include "compile_config.h"
+
 #include <EEPROM.h>
 #include "output.h"
 
 extern char IB_1[14];
 
-//#define CMP_CC1101
+
 
 #ifdef ESP8266
 	#include <SPI.h>
-
-	//#define CMP_CC1101
-
-	#ifdef CMP_CC1101
-	#define PIN_RECEIVE           5// D1
-	#else
-	#define PIN_RECEIVE            5
-	#endif
-
-	#define PIN_LED                16
-	#define PIN_SEND               4// D2  // gdo0Pin TX out
 #endif
 namespace cc1101 {
 	/*

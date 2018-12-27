@@ -1,6 +1,8 @@
 ﻿
 #include"cc1101.h"
 
+
+
  const uint8_t cc1101::initVal[] PROGMEM =
 {
 	// IDX NAME     RESET   COMMENT
@@ -351,7 +353,6 @@ void cc1101::ccFactoryReset() {
 }
 
 void cc1101::CCinit(void) {                              // initialize CC1101
-
 	cc1101_Deselect();                                  // some deselect and selects to init the cc1101
 	delayMicroseconds(30);
 

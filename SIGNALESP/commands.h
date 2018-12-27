@@ -1,4 +1,5 @@
 #pragma once
+
 #ifndef _COMMANDS_h
 #define _COMMANDS_h
 
@@ -8,6 +9,7 @@
 //	#include "WProgram.h"
 #endif
 
+#include "compile_config.h"
 
 #include <EEPROM.h>
 #include "output.h"
@@ -31,7 +33,9 @@ namespace commands {
 	const char TXT_MS[]					PROGMEM = "MS";
 	const char TXT_EQ[]					PROGMEM = "=";
 	const char TXT_FSEP[]				PROGMEM = ";";
+#ifdef CMP_CC1101
 	const char TXT_CC1101[]				PROGMEM = "CC1101 ";
+#endif
 	const char TXT_433[]				PROGMEM = "433 ";
 	const char TXT_868[]				PROGMEM = "868 ";
 	const char TXT_MHZ[]				PROGMEM = "Mhz ";
@@ -156,23 +160,29 @@ namespace commands {
 			MSG_PRINT(cmd_config); MSG_PRINT(cmd_space);
 			MSG_PRINT(cmd_read); MSG_PRINT(cmd_space);
 			MSG_PRINT(cmd_write); MSG_PRINT(cmd_space);
+#ifdef CMP_CC1101
 			if (hasCC1101) {
 				MSG_PRINT(cmd_patable); MSG_PRINT(cmd_space);
 				MSG_PRINT(cmd_ccFactoryReset); MSG_PRINT(cmd_space);
 			}
+#endif
 			MSG_PRINTLN("");
 			break;
 		case cmd_ping:
 			getPing();
 		case cmd_Version:
 			MSG_PRINT("V " PROGVERS " SIGNALduino ");
+#ifdef CMP_CC1101
 			if (hasCC1101) {
 				MSG_PRINT(FPSTR(TXT_CC1101));
+#endif
 #ifdef PIN_MARK433
 				MSG_PRINT("(");
 				MSG_PRINT(isLow(PIN_MARK433) ? "433" : "868");
 				MSG_PRINT(F("Mhz)"));
 #else
+	#ifdef CMP_CC1101
+
 				switch (cc1101::chipVersion()) {
 					//      case 0x08:    // CC1101_VERSION 0x31
 					case 0x18:  // CC1101_VERSION 0xF1
@@ -184,8 +194,9 @@ namespace commands {
 						MSG_PRINT(cmd_space);	MSG_PRINT(FPSTR(TXT_868)); MSG_PRINT(FPSTR(TXT_MHZ));
 						break;
 				}
-#endif
 			}
+	#endif
+#endif
 			MSG_PRINTLN(" - compiled at " __DATE__ " " __TIME__)
 				break;
 		case cmd_freeRam:
@@ -194,33 +205,36 @@ namespace commands {
 		case cmd_uptime:
 			MSG_PRINTLN(getUptime());
 			break;
-		case cmd_ccFactoryReset:
-			if (hasCC1101) {
-				cc1101::ccFactoryReset();
-				cc1101::CCinit();
-			}
-			break;
 		case cmd_changeReceiver:
 			changeReceiver();
 			break;
 		case cmd_config:
 			switch (IB_1[1])
 			{
-			case 'G':
-				getConfig();
-				break;
-			case 'E':
-			case 'D':
-				configCMD();
-				break;
-			case 'S':
-				configSET();
-				break;
-			default:
-				if (isxdigit(IB_1[1]) && isxdigit(IB_1[2]) && hasCC1101) {
-					uint8_t val = (uint8_t)strtol(IB_1+1, nullptr, 16);
-					cc1101::readCCreg(val);
-				}
+				case 'G':
+					getConfig();
+					break;
+				case 'E':
+				case 'D':
+					configCMD();
+					break;
+				case 'S':
+					configSET();
+					break;
+	#ifdef CMP_CC1101
+				default:
+					if (isxdigit(IB_1[1]) && isxdigit(IB_1[2]) && hasCC1101) {
+						uint8_t val = (uint8_t)strtol(IB_1+1, nullptr, 16);
+						cc1101::readCCreg(val);
+					}
+	#endif
+			}
+			break;
+#ifdef CMP_CC1101
+		case cmd_ccFactoryReset:
+			if (hasCC1101) {
+				cc1101::ccFactoryReset();
+				cc1101::CCinit();
 			}
 			break;
 		case cmd_patable:
@@ -233,7 +247,9 @@ namespace commands {
 				MSG_PRINT(b);
 				MSG_PRINTLN(FPSTR(TXT_TPATAB));
 			}
+			break;
 
+#endif
 		case cmd_read:
 			// R<adr>  read EEPROM
 			if (isHexadecimalDigit(IB_1[1]) && isHexadecimalDigit(IB_1[2]) && hasCC1101) {
@@ -265,9 +281,10 @@ namespace commands {
 		case cmd_write:
 			if (IB_1[1] == 'S' && IB_1[2] == '3')
 			{
-				cc1101::commandStrobes();
-			}
-			else if (isHexadecimalDigit(IB_1[1]) && isHexadecimalDigit(IB_1[2]) && isHexadecimalDigit(IB_1[3]) && isHexadecimalDigit(IB_1[4])) {
+				#ifdef CMP_CC1101
+					cc1101::commandStrobes();
+				#endif 
+			} else if (isHexadecimalDigit(IB_1[1]) && isHexadecimalDigit(IB_1[2]) && isHexadecimalDigit(IB_1[3]) && isHexadecimalDigit(IB_1[4])) {
 				char b[3];
 				b[2] = '\0';
 
@@ -280,9 +297,11 @@ namespace commands {
 				#ifdef ESP8266
 				EEPROM.commit();
 				#endif
+#ifdef CMP_CC1101
 				if (hasCC1101) {
 					cc1101::writeCCreg(reg, val);
 				}
+#endif
 			}
 			break;
 		default:

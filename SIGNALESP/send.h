@@ -135,7 +135,7 @@ void send_cmd()
 			{
 				cmdNo++;
 				command[cmdNo].type = combined;
-extraDelay = false;
+				extraDelay = false;
 			}
 			else if (msg_beginptr[1] == 'M') // send manchester
 			{
@@ -196,26 +196,28 @@ extraDelay = false;
 		command[cmdNo].sendclock = strtoul(&msg_beginptr[2], &msg_endptr, 10);
 		DBG_PRINTLN("adding sendclock");
 		}
+#ifdef CMP_CC1101
 		else if (msg_beginptr[0] == 'F' && msg_beginptr[1] == '=')
 		{
-		ccParamAnz = (msg_endptr - msg_beginptr - 1) / 2;
+			ccParamAnz = (msg_endptr - msg_beginptr - 1) / 2;
 
-		if (ccParamAnz > 0 && ccParamAnz <= 5 && hasCC1101) {
-			//uint8_t hex;
-			DBG_PRINT("write new ccregs #");			DBG_PRINTLN(ccParamAnz);
-			char b[3];
-			b[2] = '\0';
-			for (uint8_t i = 0; i < ccParamAnz; i++)
-			{
-				ccReg[i] = cc1101::readReg(0x0d + i, 0x80);    // alte Registerwerte merken
-				memcpy(b, msg_beginptr + 2 + (i * 2), 2);
-				val = strtol(b, nullptr, 16);
-				cc1101::writeReg(0x0d + i, val);            // neue Registerwerte schreiben
-				DBG_PRINT(b);
+			if (ccParamAnz > 0 && ccParamAnz <= 5 && hasCC1101) {
+				//uint8_t hex;
+				DBG_PRINT("write new ccregs #");			DBG_PRINTLN(ccParamAnz);
+				char b[3];
+				b[2] = '\0';
+				for (uint8_t i = 0; i < ccParamAnz; i++)
+				{
+					ccReg[i] = cc1101::readReg(0x0d + i, 0x80);    // alte Registerwerte merken
+					memcpy(b, msg_beginptr + 2 + (i * 2), 2);
+					val = strtol(b, nullptr, 16);
+					cc1101::writeReg(0x0d + i, val);            // neue Registerwerte schreiben
+					DBG_PRINT(b);
+				}
+				DBG_PRINTLN("");
 			}
-			DBG_PRINTLN("");
 		}
-		}
+#endif
 		if (msg_endptr == msg_beginptr)
 		{
 			DBG_PRINTLN("break loop");
@@ -284,6 +286,7 @@ extraDelay = false;
 		if (extraDelay) delay(1);
 	}
 
+	#ifdef CMP_CC1101
 	if (ccParamAnz > 0) {
 		DBG_PRINT("ccreg write back ");
 		//char b[3];
@@ -296,6 +299,7 @@ extraDelay = false;
 		}
 		DBG_PRINTLN("");
 	}
+	#endif
 	DBG_PRINT(IB_1);
 	MSG_PRINTLN(buf); // echo data of command
 	musterDec.reset();
