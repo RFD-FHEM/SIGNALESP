@@ -238,14 +238,13 @@ bool cc1101::checkCC1101() {
 
 	uint8_t version = chipVersion();  // Version
 	uint8_t partnum = readReg((revision == 0x01 ? CC1101_PARTNUM_REV01 : CC1101_PARTNUM_REV00), CC1101_READ_SINGLE);  // Partnum
-	DBG_PRINT("CCVersion=");	DBG_PRINTLN("0x" + String(version, HEX));
-	DBG_PRINT("CCPartnum=");	DBG_PRINTLN("0x" + String(partnum, HEX));
+	DBG_PRINT(FPSTR(TXT_CCREVISION));	DBG_PRINTLN("0x" + String(version, HEX));
+	DBG_PRINT(FPSTR(TXT_CCPARTNUM));	DBG_PRINTLN("0x" + String(partnum, HEX)); //TODO String Klasse entfernen
 
 	//checks if valid Chip ID is found. Usualy 0x03 or 0x14. if not -> abort
 	if (version == 0x00 || version == 0xFF)
 	{
-		DBG_PRINTLN(F("no CC11xx found!"));
-		DBG_PRINTLN();
+		DBG_PRINT(F("no "));  DBG_PRINT(FPSTR(TXT_CC1101)); DBG_PRINTLN(FPSTR(TXT_FOUND));//  F("no CC11xx found!"));
 		return false;  // Todo: power down SPI etc
 	}
 	return true;
@@ -317,18 +316,19 @@ void cc1101::setTransmitMode()
 	uint8_t maxloop = 0xff;
 	while (maxloop-- && (cmdStrobe(CC1100_STX) & CC1100_STATUS_STATE_BM) != CC1100_STATE_TX)  // TX enable
 		delay(1);
-	if (maxloop == 0) DBG_PRINTLN("CC1101: Setting TX failed");
+	if (maxloop == 0) DBG_PRINT(FPSTR(TXT_CC1101)); DBG_PRINTLN(F(": Setting TX failed"));
 }
 
 
 bool cc1101::regCheck()
 {
+	DBG_PRINT(FPSTR(TXT_CC1101));
+	DBG_PRINT(F("PKTCTRL0=")); DBG_PRINT(readReg(CC1100_PKTCTRL0, CC1101_CONFIG));
+	DBG_PRINT(F(" vs EEPROM PKTCTRL0=")); DBG_PRINTLN(cc1101::initVal[CC1100_PKTCTRL0]);
 
-	DBG_PRINT("CC1100_PKTCTRL0="); DBG_PRINT(readReg(CC1100_PKTCTRL0, CC1101_CONFIG));
-	DBG_PRINT(" vs EEPROM PKTCTRL0="); DBG_PRINTLN(cc1101::initVal[CC1100_PKTCTRL0]);
-
-	DBG_PRINT("C1100_IOCFG2="); DBG_PRINT(readReg(CC1100_IOCFG2, CC1101_CONFIG));
-	DBG_PRINT(" vs EEPROM IOCFG2="); DBG_PRINTLN(cc1101::initVal[CC1100_IOCFG2]);
+	DBG_PRINT(FPSTR(TXT_CC1101)); 
+	DBG_PRINT(F("_IOCFG2=")); DBG_PRINT(readReg(CC1100_IOCFG2, CC1101_CONFIG));
+	DBG_PRINT(F(" vs EEPROM IOCFG2=")); DBG_PRINTLN(cc1101::initVal[CC1100_IOCFG2]);
 
 	return (readReg(CC1100_PKTCTRL0, CC1101_CONFIG) == cc1101::initVal[CC1100_PKTCTRL0]) && (readReg(CC1100_IOCFG2, CC1101_CONFIG) == cc1101::initVal[CC1100_IOCFG2]);
 }
@@ -351,8 +351,9 @@ void cc1101::ccFactoryReset() {
 	MSG_PRINTLN("ccFactoryReset done");
 }
 
-void cc1101::CCinit(void) {                              // initialize CC1101
-	DBG_PRINT("ccinit..");
+void cc1101::CCinit(void) {  // initialize CC1101
+	
+	DBG_PRINT(FPSTR(TXT_CCINIT)); 
 
 	cc1101_Deselect();                                  // some deselect and selects to init the cc1101
 	delayMicroseconds(30);
@@ -364,13 +365,13 @@ void cc1101::CCinit(void) {                              // initialize CC1101
 	cc1101_Deselect();
 	delayMicroseconds(45);
 
-	DBG_PRINT("SRES Started,");
+	DBG_PRINT(F("SRES Started,"));
 	cmdStrobe(CC1101_SRES);                               // send reset
-	DBG_PRINT("POR Done,");
+	DBG_PRINT(F("POR Done,"));
 	delay(10);
 
 	cc1101_Select();
-	DBG_PRINT("eeprom read");
+	DBG_PRINT(FPSTR(TXT_EEPROM)); 	DBG_PRINT(FPSTR(TXT_BLANK));	DBG_PRINT(FPSTR(TXT_READ));
 
 	sendSPI(CC1100_WRITE_BURST);
 	for (uint8_t i = 0; i < sizeof(cc1101::initVal); i++) {              // write EEPROM value to cc11001
@@ -382,7 +383,7 @@ void cc1101::CCinit(void) {                              // initialize CC1101
 	delayMicroseconds(10);            // ### todo: welcher Wert ist als delay sinnvoll? ###
 
 	writePatable();                                 // write PatableArray to patable reg
-	DBG_PRINTLN("done");
+	DBG_PRINTLN(F("done"));
 
 	delay(1);
 	setReceiveMode();

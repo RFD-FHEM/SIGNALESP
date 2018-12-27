@@ -26,21 +26,6 @@ extern volatile bool blinkLED;
 
 namespace commands {
 
-	const char TXT_UNSUPPORTED1[]		PROGMEM = "Unsupported short command";
-	const char TXT_EEPROM[]				PROGMEM = "EEPROM";
-	const char TXT_MU[]					PROGMEM = "MU";
-	const char TXT_MC[]					PROGMEM = "MC";
-	const char TXT_MS[]					PROGMEM = "MS";
-	const char TXT_EQ[]					PROGMEM = "=";
-	const char TXT_FSEP[]				PROGMEM = ";";
-#ifdef CMP_CC1101
-	const char TXT_CC1101[]				PROGMEM = "CC1101 ";
-#endif
-	const char TXT_433[]				PROGMEM = "433 ";
-	const char TXT_868[]				PROGMEM = "868 ";
-	const char TXT_MHZ[]				PROGMEM = "Mhz ";
-	const char TXT_WRITE[]				PROGMEM = "write ";
-	const char TXT_TPATAB[]				PROGMEM = " to PATABLE done";
 
 	
 
@@ -151,19 +136,19 @@ namespace commands {
 		{
 		case cmd_help:
 			MSG_PRINT(cmd_help);	MSG_PRINT(F(" Use one of "));
-			MSG_PRINT(cmd_Version); MSG_PRINT(cmd_space);
-			MSG_PRINT(cmd_freeRam); MSG_PRINT(cmd_space);
-			MSG_PRINT(cmd_uptime); MSG_PRINT(cmd_space);
-			MSG_PRINT(cmd_changeReceiver); MSG_PRINT(cmd_space);
-			MSG_PRINT(cmd_send); MSG_PRINT(cmd_space);
-			MSG_PRINT(cmd_ping); MSG_PRINT(cmd_space);
-			MSG_PRINT(cmd_config); MSG_PRINT(cmd_space);
-			MSG_PRINT(cmd_read); MSG_PRINT(cmd_space);
-			MSG_PRINT(cmd_write); MSG_PRINT(cmd_space);
+			MSG_PRINT(cmd_Version); MSG_PRINT(FPSTR(TXT_BLANK));
+			MSG_PRINT(cmd_freeRam); MSG_PRINT(FPSTR(TXT_BLANK));
+			MSG_PRINT(cmd_uptime); MSG_PRINT(FPSTR(TXT_BLANK));
+			MSG_PRINT(cmd_changeReceiver); MSG_PRINT(FPSTR(TXT_BLANK));
+			MSG_PRINT(cmd_send); MSG_PRINT(FPSTR(TXT_BLANK));
+			MSG_PRINT(cmd_ping); MSG_PRINT(FPSTR(TXT_BLANK));
+			MSG_PRINT(cmd_config); MSG_PRINT(FPSTR(TXT_BLANK));
+			MSG_PRINT(cmd_read); MSG_PRINT(FPSTR(TXT_BLANK));
+			MSG_PRINT(cmd_write); MSG_PRINT(FPSTR(TXT_BLANK));
 #ifdef CMP_CC1101
 			if (hasCC1101) {
-				MSG_PRINT(cmd_patable); MSG_PRINT(cmd_space);
-				MSG_PRINT(cmd_ccFactoryReset); MSG_PRINT(cmd_space);
+				MSG_PRINT(cmd_patable); MSG_PRINT(FPSTR(TXT_BLANK));
+				MSG_PRINT(cmd_ccFactoryReset); MSG_PRINT(FPSTR(TXT_BLANK));
 			}
 #endif
 			MSG_PRINTLN("");
@@ -171,10 +156,11 @@ namespace commands {
 		case cmd_ping:
 			getPing();
 		case cmd_Version:
-			MSG_PRINT("V " PROGVERS " SIGNALduino ");
+			MSG_PRINT(F("V " PROGVERS " SIGNALduino "));
 #ifdef CMP_CC1101
 			if (hasCC1101) {
 				MSG_PRINT(FPSTR(TXT_CC1101));
+
 #endif
 #ifdef PIN_MARK433
 				MSG_PRINT("(");
@@ -187,18 +173,18 @@ namespace commands {
 					//      case 0x08:    // CC1101_VERSION 0x31
 					case 0x18:  // CC1101_VERSION 0xF1
 
-						MSG_PRINT(cmd_space);	MSG_PRINT(FPSTR(TXT_433)); MSG_PRINT(FPSTR(TXT_MHZ));
+						MSG_PRINT(FPSTR(TXT_BLANK));	MSG_PRINT(FPSTR(TXT_433)); MSG_PRINT(FPSTR(TXT_MHZ));
 						break;
 					case 0x04:  // CC1101_VERSION 0x31
 					case 0x14:  // CC1101_VERSION 0xF1
-						MSG_PRINT(cmd_space);	MSG_PRINT(FPSTR(TXT_868)); MSG_PRINT(FPSTR(TXT_MHZ));
+						MSG_PRINT(FPSTR(TXT_BLANK));	MSG_PRINT(FPSTR(TXT_868)); MSG_PRINT(FPSTR(TXT_MHZ));
 						break;
 				}
 			}
 	#endif
 #endif
-			MSG_PRINTLN(" - compiled at " __DATE__ " " __TIME__)
-				break;
+			MSG_PRINTLN(F(" - compiled at " __DATE__ " " __TIME__))
+			break;
 		case cmd_freeRam:
 			MSG_PRINTLN(freeRam());
 			break;

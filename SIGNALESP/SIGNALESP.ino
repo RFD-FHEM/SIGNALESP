@@ -14,8 +14,13 @@
 #define EE_MAGIC_OFFSET      0
 #define addr_features EE_MAGIC_OFFSET+2
 #define MAX_SRV_CLIENTS 2
+/*
+#undef PSTR
+#define PSTR(s) (__extension__({static const char __c[] PROGMEM = (s); &__c[0];}))
 
-
+#undef F
+#define F(string_literal) (FPSTR(PSTR(string_literal)))
+*/
 
 void serialEvent();
 void cronjob(void *pArg);
@@ -89,14 +94,6 @@ char IB_1[14]; // Input Buffer one - capture commands
 const char sos_sequence[] = "0101010001110001110001110001010100000000";
 const char boot_sequence[] = "00010100111";
 
-#ifdef CMP_CC1101
-const char TXT_CCINIT[]			PROGMEM = "CCInit ";
-const char TXT_CC1101[]			PROGMEM = "CC1101 ";
-#endif
-const char TXT_RECENA[]			PROGMEM = "receiver enabled";
-const char TXT_FOUND[]			PROGMEM = "found ";
-const char TXT_COMMAND[]		PROGMEM = "command e";
-const char TXT_DOFRESET[]		PROGMEM = "is not correctly set. Please do a factory reset via command e";
 
 
 void ICACHE_RAM_ATTR sosBlink (void *pArg) {
@@ -148,7 +145,6 @@ void setup() {
 
 #ifdef CMP_CC1101
 	DBG_PRINT(FPSTR(TXT_CCINIT));
-
 	cc1101::CCinit();					 // CC1101 init
 	hasCC1101 = cc1101::checkCC1101();	 // Check for cc1101
 
@@ -360,7 +356,9 @@ void setup() {
 	}
 	else {
 		DBG_PRINT(FPSTR(TXT_CC1101));
-		DBG_PRINTLN(FPSTR(TXT_DOFRESET));
+		DBG_PRINT(FPSTR(TXT_DOFRESET));
+		DBG_PRINTLN(FPSTR(TXT_COMMAND));
+
 	}
 #endif
 	MSG_PRINTER.setTimeout(400);
@@ -529,14 +527,14 @@ int freeRam() {
 
 
 void dumpEEPROM() {
-  Serial.println("\ndump EEPROM:");
+  DBG_PRINTLN(F("dump EEPROM:"));
   for (uint8_t i=0; i<56; i++) {
     String temp=String(EEPROM.read(i), HEX);
     Serial.print((temp.length() == 1 ? "0" : "") + temp + " ");
     if ((i & 0x0F) == 0x0F)
-      Serial.println("");
+		DBG_PRINTLN("");
   }
-  Serial.println("");
+  DBG_PRINTLN("");
 }
 
 

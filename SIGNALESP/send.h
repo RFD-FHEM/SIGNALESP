@@ -5,6 +5,7 @@
 
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
+#include "output.h"
 #else
 //	#include "WProgram.h"
 #endif
@@ -13,9 +14,6 @@ extern bool hasCC1101;
 extern char IB_1[14];
 
 
-const char TXT_SENDCMD[]		PROGMEM = "send cmd ";
-const char TXT_TOLONG[]			PROGMEM = "to long ";
-const char TXT_CORRUPT[]		PROGMEM = "corrupt";
 //================================= RAW Send ======================================
 void send_raw(char *startpos, char *endpos, const int16_t *buckets)
 {

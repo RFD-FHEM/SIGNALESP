@@ -43,6 +43,18 @@
     <ClInclude Include="..\src\_micro-api\libraries\fastdelegate\src\FastDelegate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="compile_config.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="functions.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="send.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="commands.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\_micro-api\libraries\SimpleFIFO\src\SimpleFIFO.cpp">
@@ -59,6 +71,9 @@
     </ClCompile>
     <ClCompile Include="wifi-config.h">
       <Filter>Header Files</Filter>
+    </ClCompile>
+    <ClCompile Include="cc1101.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
