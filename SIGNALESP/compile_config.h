@@ -17,6 +17,7 @@
 	#define PIN_LED                16
 	#define PIN_SEND               4// D2  // gdo0Pin TX out
 	#define DEBUG				   1
+	#define ETHERNET_PRINT
 #endif
 
 

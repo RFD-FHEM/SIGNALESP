@@ -1,6 +1,5 @@
 ﻿
-#include"cc1101.h"
-
+#include "cc1101.h"
 
 
  const uint8_t cc1101::initVal[] PROGMEM =
