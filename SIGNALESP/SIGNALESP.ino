@@ -1,22 +1,11 @@
+#include "compile_config.h"
+
 #define PROGNAME               "RF_RECEIVER-ESP"
 #define PROGVERS               "3.3.1-rc6"
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
-
-//#define CMP_CC1101
-
-#ifdef CMP_CC1101
-	#define PIN_RECEIVE           5// D1
-#else
-	#define PIN_RECEIVE            5
-#endif
-
-#define PIN_LED                16
-#define PIN_SEND               4// D2  // gdo0Pin TX out
 #define BAUDRATE               115200
 #define FIFO_LENGTH			   200
-#define DEBUG				   1
-
 
 #define ETHERNET_PRINT
 #define WIFI_MANAGER_OVERRIDE_STRINGS
@@ -100,8 +89,10 @@ char IB_1[14]; // Input Buffer one - capture commands
 const char sos_sequence[] = "0101010001110001110001110001010100000000";
 const char boot_sequence[] = "00010100111";
 
+#ifdef CMP_CC1101
 const char TXT_CCINIT[]			PROGMEM = "CCInit ";
 const char TXT_CC1101[]			PROGMEM = "CC1101 ";
+#endif
 const char TXT_RECENA[]			PROGMEM = "receiver enabled";
 const char TXT_FOUND[]			PROGMEM = "found ";
 const char TXT_COMMAND[]		PROGMEM = "command e";
@@ -126,7 +117,6 @@ void ICACHE_RAM_ATTR sosBlink (void *pArg) {
 
 
 
-//callback notifying us of the need to save config
 WiFiManager wifiManager;
 
 void setup() {
@@ -157,7 +147,7 @@ void setup() {
 	initEEPROM();
 
 #ifdef CMP_CC1101
-	DBG_PRINT(TXT_CCINIT);
+	DBG_PRINT(FPSTR(TXT_CCINIT));
 
 	cc1101::CCinit();					 // CC1101 init
 	hasCC1101 = cc1101::checkCC1101();	 // Check for cc1101
@@ -361,15 +351,18 @@ void setup() {
 	os_timer_arm(&cronTimer, 31, true);
 
 	musterDec.setStreamCallback(writeCallback);
-
+#ifdef CMP_CC1101
 	if (!hasCC1101 || cc1101::regCheck()) {
+#endif
 		enableReceive();
 		DBG_PRINT(FPSTR(TXT_RECENA));
+#ifdef CMP_CC1101
 	}
 	else {
 		DBG_PRINT(FPSTR(TXT_CC1101));
 		DBG_PRINTLN(FPSTR(TXT_DOFRESET));
 	}
+#endif
 	MSG_PRINTER.setTimeout(400);
 
 //	WiFi.mode(WIFI_STA);

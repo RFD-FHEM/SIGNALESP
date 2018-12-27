@@ -92,7 +92,7 @@ void initEEPROM(void) {
 	EEPROM.begin(512); //Max bytes of eeprom to use
 	#endif
 	if (EEPROM.read(EE_MAGIC_OFFSET) == VERSION_1 && EEPROM.read(EE_MAGIC_OFFSET + 1) == VERSION_2) {
-		DBG_PRINTLN("Reading values fom eeprom");
+		DBG_PRINT("Reading values fom eeprom..");
 	}
 	else {
 		storeFunctions(1, 1, 1, 1);    // Init EEPROM with all flags enabled
@@ -108,6 +108,7 @@ void initEEPROM(void) {
 #endif
 	}
 	getFunctions(&musterDec.MSenabled, &musterDec.MUenabled, &musterDec.MCenabled, &musterDec.MredEnabled);
+	DBG_PRINTLN("done");
 
 }
 

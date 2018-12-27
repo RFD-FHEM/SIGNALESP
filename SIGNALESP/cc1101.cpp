@@ -353,6 +353,8 @@ void cc1101::ccFactoryReset() {
 }
 
 void cc1101::CCinit(void) {                              // initialize CC1101
+	DBG_PRINT("ccinit..");
+
 	cc1101_Deselect();                                  // some deselect and selects to init the cc1101
 	delayMicroseconds(30);
 
@@ -363,21 +365,25 @@ void cc1101::CCinit(void) {                              // initialize CC1101
 	cc1101_Deselect();
 	delayMicroseconds(45);
 
-	DBG_PRINTLN("SRES Started");
+	DBG_PRINT("SRES Started,");
 	cmdStrobe(CC1101_SRES);                               // send reset
-	DBG_PRINTLN("POR Done");
+	DBG_PRINT("POR Done,");
 	delay(10);
 
 	cc1101_Select();
+	DBG_PRINT("eeprom read");
 
 	sendSPI(CC1100_WRITE_BURST);
 	for (uint8_t i = 0; i < sizeof(cc1101::initVal); i++) {              // write EEPROM value to cc11001
 		sendSPI(EEPROM.read(EE_CC1100_CFG + i));
+		DBG_PRINT(".");
+
 	}
 	cc1101_Deselect();
 	delayMicroseconds(10);            // ### todo: welcher Wert ist als delay sinnvoll? ###
 
 	writePatable();                                 // write PatableArray to patable reg
+	DBG_PRINTLN("done");
 
 	delay(1);
 	setReceiveMode();
