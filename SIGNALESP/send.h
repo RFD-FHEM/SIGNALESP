@@ -5,14 +5,13 @@
 
 #if defined(ARDUINO) && ARDUINO >= 100
 #include "Arduino.h"
-#include "output.h"
 #else
 //	#include "WProgram.h"
 #endif
+#include "compile_config.h"
 
 extern bool hasCC1101;
 extern char IB_1[14];
-
 
 //================================= RAW Send ======================================
 void send_raw(char *startpos, char *endpos, const int16_t *buckets)
@@ -31,14 +30,15 @@ void send_raw(char *startpos, char *endpos, const int16_t *buckets)
 		dur = abs(buckets[index]); 		//isLow ? dur = abs(buckets[index]) : dur = abs(buckets[index]);
 
 		while (stoptime > micros()) {
+#ifdef ESP8266
 			yield();
+#endif
 			;
 		}
 		isLow ? digitalLow(PIN_SEND) : digitalHigh(PIN_SEND);
 		stoptime += dur;
 	}
 	while (stoptime > micros()) {
-		yield();
 		;
 	}
 	//DBG_PRINTLN("");
@@ -67,7 +67,11 @@ void send_mc(const char *startpos, const char *endpos, const int16_t clock)
 
 				stoptime += clock;
 				while (stoptime > micros())
+				{
+#ifdef ESP8266
 					yield();
+#endif
+				}
 			}
 
 		}
@@ -133,7 +137,7 @@ void send_cmd()
 			{
 				cmdNo++;
 				command[cmdNo].type = combined;
-				extraDelay = false;
+extraDelay = false;
 			}
 			else if (msg_beginptr[1] == 'M') // send manchester
 			{
@@ -194,28 +198,26 @@ void send_cmd()
 		command[cmdNo].sendclock = strtoul(&msg_beginptr[2], &msg_endptr, 10);
 		DBG_PRINTLN("adding sendclock");
 		}
-#ifdef CMP_CC1101
 		else if (msg_beginptr[0] == 'F' && msg_beginptr[1] == '=')
 		{
-			ccParamAnz = (msg_endptr - msg_beginptr - 1) / 2;
+		ccParamAnz = (msg_endptr - msg_beginptr - 1) / 2;
 
-			if (ccParamAnz > 0 && ccParamAnz <= 5 && hasCC1101) {
-				//uint8_t hex;
-				DBG_PRINT("write new ccregs #");			DBG_PRINTLN(ccParamAnz);
-				char b[3];
-				b[2] = '\0';
-				for (uint8_t i = 0; i < ccParamAnz; i++)
-				{
-					ccReg[i] = cc1101::readReg(0x0d + i, 0x80);    // alte Registerwerte merken
-					memcpy(b, msg_beginptr + 2 + (i * 2), 2);
-					val = strtol(b, nullptr, 16);
-					cc1101::writeReg(0x0d + i, val);            // neue Registerwerte schreiben
-					DBG_PRINT(b);
-				}
-				DBG_PRINTLN("");
+		if (ccParamAnz > 0 && ccParamAnz <= 5 && hasCC1101) {
+			//uint8_t hex;
+			DBG_PRINT("write new ccregs #");			DBG_PRINTLN(ccParamAnz);
+			char b[3];
+			b[2] = '\0';
+			for (uint8_t i = 0; i < ccParamAnz; i++)
+			{
+				ccReg[i] = cc1101::readReg(0x0d + i, 0x80);    // alte Registerwerte merken
+				memcpy(b, msg_beginptr + 2 + (i * 2), 2);
+				val = strtol(b, nullptr, 16);
+				cc1101::writeReg(0x0d + i, val);            // neue Registerwerte schreiben
+				DBG_PRINT(b);
 			}
+			DBG_PRINTLN("");
 		}
-#endif
+		}
 		if (msg_endptr == msg_beginptr)
 		{
 			DBG_PRINTLN("break loop");
@@ -249,6 +251,7 @@ void send_cmd()
 				MSG_PRINTER.readBytesUntil('\n', buf, 255);
 				MSG_PRINT(FPSTR(TXT_SENDCMD));
 				MSG_PRINTLN(FPSTR(TXT_TOLONG));
+				//MSG_PRINTLN(F("send cmd to long"));
 				return;
 			}
 			*(msg_endptr + 1) = '\0'; // Nullterminate the string
@@ -284,7 +287,6 @@ void send_cmd()
 		if (extraDelay) delay(1);
 	}
 
-	#ifdef CMP_CC1101
 	if (ccParamAnz > 0) {
 		DBG_PRINT("ccreg write back ");
 		//char b[3];
@@ -297,7 +299,6 @@ void send_cmd()
 		}
 		DBG_PRINTLN("");
 	}
-	#endif
 	DBG_PRINT(IB_1);
 	MSG_PRINTLN(buf); // echo data of command
 	musterDec.reset();
