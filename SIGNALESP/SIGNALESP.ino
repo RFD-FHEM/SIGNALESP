@@ -1,6 +1,6 @@
 #include "compile_config.h"
 
-#define PROGNAME               "SIGNALESP"
+#define PROGNAME               " SIGNALESP "
 #define PROGVERS               "3.3.1-rc6"
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
