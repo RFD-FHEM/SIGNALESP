@@ -339,7 +339,6 @@ void setup() {
 
 	os_timer_disarm(&cronTimer);
 
-	os_timer_setfn(&cronTimer, cronjob, NULL);
 	os_timer_arm(&cronTimer, 31, true);
 
 	musterDec.setStreamCallback(writeCallback);
@@ -365,10 +364,34 @@ void setup() {
 }
 
 void ICACHE_RAM_ATTR cronjob(void *pArg) {
+
+	static uint8_t cnt = 0;
+	cli();
+	const unsigned long  duration = micros() - lastTime;
+
+	
+	os_timer_arm(&cronTimer, 31, true);
+
+	if (duration >= maxPulse) { //Auf Maximalwert pruefen.
+		int sDuration = maxPulse;
+		if (isLow(PIN_RECEIVE)) { // Wenn jetzt low ist, ist auch weiterhin low
+			sDuration = -sDuration;
+		}
+		FiFo.enqueue(sDuration);
+		lastTime = micros();
+	}
+	else if (duration > 10000) {
+		os_timer_arm(&cronTimer, maxPulse - duration + 16, true);
+	}
 	digitalWrite(PIN_LED, blinkLED);
 	blinkLED = false;
 
-	//TOdo: cronjob analog Arduino Variante entwickeln
+	sei();
+
+	// Infrequent time uncritical jobs (~ every 2 hours)
+	if (cnt++ == 0)  // if cnt is 0 at start or during rollover
+		getUptime();
+
 }
 
 
