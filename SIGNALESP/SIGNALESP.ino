@@ -1,6 +1,6 @@
 #include "compile_config.h"
 
-#define PROGNAME               "RF_RECEIVER-ESP"
+#define PROGNAME               "SIGNALESP"
 #define PROGVERS               "3.3.1-rc6"
 #define VERSION_1               0x33
 #define VERSION_2               0x1d
@@ -12,23 +12,18 @@
 
 // EEProm Addresscommands
 #define EE_MAGIC_OFFSET      0
-#define addr_features EE_MAGIC_OFFSET+2
+#define addr_features        0xff
 #define MAX_SRV_CLIENTS 2
-/*
-#undef PSTR
-#define PSTR(s) (__extension__({static const char __c[] PROGMEM = (s); &__c[0];}))
 
-#undef F
-#define F(string_literal) (FPSTR(PSTR(string_literal)))
-*/
+#include "compile_config.h"
 
 void serialEvent();
 void cronjob(void *pArg);
 int freeRam();
-unsigned long getUptime();
-void enDisPrint(bool enDis);
-void getFunctions(bool *ms, bool *mu, bool *mc);
-void initEEPROM(void);
+//unsigned long getUptime();
+//void enDisPrint(bool enDis);
+//void getFunctions(bool *ms, bool *mu, bool *mc);
+//void initEEPROM(void);
 uint8_t rssiCallback() { return 0; }; // Dummy return if no rssi value can be retrieved from receiver
 size_t writeCallback(const uint8_t *buf, uint8_t len);
 extern "C" {
@@ -74,12 +69,13 @@ volatile bool blinkLED = false;
 String cmdstring = "";
 volatile unsigned long lastTime = micros();
 
+/*
 #define digitalLow(P) digitalWrite(P,LOW)
 #define digitalHigh(P) digitalWrite(P,HIGH)
 #define isHigh(P) (digitalRead(P) == HIGH)
 #define isLow(P) (digitalRead(P) == LOW)
 #define digitalState(P)((uint8_t)isHigh(P))
-
+*/
 
 os_timer_t cronTimer;
 os_timer_t blinksos;
@@ -358,7 +354,6 @@ void setup() {
 		DBG_PRINT(FPSTR(TXT_CC1101));
 		DBG_PRINT(FPSTR(TXT_DOFRESET));
 		DBG_PRINTLN(FPSTR(TXT_COMMAND));
-
 	}
 #endif
 	MSG_PRINTER.setTimeout(400);
@@ -523,19 +518,7 @@ int freeRam() {
 
 
 
-//================================= EEProm commands ======================================
 
-
-void dumpEEPROM() {
-  DBG_PRINTLN(F("dump EEPROM:"));
-  for (uint8_t i=0; i<56; i++) {
-    String temp=String(EEPROM.read(i), HEX);
-    Serial.print((temp.length() == 1 ? "0" : "") + temp + " ");
-    if ((i & 0x0F) == 0x0F)
-		DBG_PRINTLN("");
-  }
-  DBG_PRINTLN("");
-}
 
 
 
