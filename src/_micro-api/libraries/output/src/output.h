@@ -15,7 +15,7 @@ static const char TXT_CHIP[]				PROGMEM = "chip";
 static const char TXT_RECENA[]				PROGMEM = "receiver enabled" ;
 static const char TXT_FOUND[]				PROGMEM = "found ";
 static const char TXT_COMMAND[]				PROGMEM = "command e";
-static const char TXT_DOFRESET[]			PROGMEM = "is not correctly set. Please do a factory reset via";
+static const char TXT_DOFRESET[]			PROGMEM = "is not correctly set. Please do a factory reset via ";
 static const char TXT_CCREVISION[]			PROGMEM = "CCVersion =";
 static const char TXT_CCPARTNUM[]			PROGMEM = "CCPartnum =";
 static const char TXT_UNSUPPORTED1[]		PROGMEM = "Unsupported short command";
@@ -90,6 +90,10 @@ static const char TXT_TPATAB[]				PROGMEM = " to PATABLE done";
 	#ifndef isHigh
 		#define isHigh(pin) (digitalRead(pin) == HIGH)
 	#endif
+	#ifndef isLow
+		#define isLow(pin) (digitalRead(pin) == LOW)
+	#endif
+
 #endif
 
 
