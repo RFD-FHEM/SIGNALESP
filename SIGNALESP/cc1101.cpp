@@ -1,14 +1,15 @@
 ﻿
 #include "cc1101.h"
 
-
+uint8_t cc1101::revision = 0x01;
  const uint8_t cc1101::initVal[] PROGMEM =
 {
 	// IDX NAME     RESET   COMMENT
 0x0D, // 00 IOCFG2    29     GDO2 as serial output
 0x2E, // 01 IOCFG1           Tri-State
 0x2D, // 02 IOCFG0    3F     GDO0 for input
-0x07, // 03 FIFOTHR   
+//0x07, // 03 FIFOTHR          RX filter bandwidth > 325 kHz, FIFOTHR = 0x07
+0x47, // 03 FIFOTHR          RX filter bandwidth = 325 kHz, FIFOTHR = 0x47
 0xD3, // 04 SYNC1     
 0x91, // 05 SYNC0     
 0x3D, // 06 PKTLEN    0F
@@ -18,9 +19,9 @@
 0x00, // 0A CHANNR   
 0x06, // 0B FSCTRL1   0F     152kHz IF Frquency
 0x00, // 0C FSCTRL0
-0x10, // 0D FREQ2     1E     Freq
-0xB0, // 0E FREQ1     C4     
-0x71, // 0F FREQ0     EC     
+0x10, // 0D FREQ2     1E     Freq   #12  Reg Pos 0C
+0xB0, // 0E FREQ1     C4				 Reg Pos 0D
+0x71, // 0F FREQ0     EC				 Reg Pos 0E
 0x57, // 10 MDMCFG4   8C     bWidth 325kHz
 0xC4, // 11 MDMCFG3   22     DataRate
 0x30, // 12 MDMCFG2   02     Modulation: ASK
@@ -34,11 +35,13 @@
 0x6C, // 1A BSCFG
 0x07, // 1B AGCCTRL2  03     42 dB instead of 33dB
 0x00, // 1C AGCCTRL1  40     
-0x90, // 1D AGCCTRL0  91     4dB decision boundery
+//0x90, // 1D AGCCTRL0  90     4dB decision boundery
+0x91, // 1D AGCCTRL0  91     8dB decision boundery
 0x87, // 1E WOREVT1
 0x6B, // 1F WOREVT0
 0xF8, // 20 WORCTRL
-0x56, // 21 FREND1
+//0x56, // 21 FREND1    56     RX filter bandwidth = 101 kHz, FREND1 = 0x56
+0xB6, // 21 FREND1    B6     RX filter bandwidth > 101 kHz, FREND1 = 0xB6
 0x11, // 22 FREND0    16     0x11 for no PA ramping
 0xE9, // 23 FSCAL3    A9    E9 ?? 
 0x2A, // 24 FSCAL2    0A    
@@ -48,7 +51,6 @@
 0x00, // 28 RCCTRL0
 };
 
-uint8_t cc1101::revision = 0x01;
 
 
  byte cc1101::hex2int(byte hex) {    // convert a hexdigit to int    // Todo: printf oder scanf nutzen
@@ -277,7 +279,7 @@ void cc1101::setup()
 	SPI.setClockDivider(SPI_CLOCK_DIV4);
 #endif
 	pinAsInput(PIN_RECEIVE);    // gdo2
-	pinAsOutput(PIN_SEND);      // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
+	pinAsInput(PIN_SEND);      // gdo0Pi, sicherheitshalber bis zum CC1101 init erstmal input   
 }
 
 uint8_t cc1101::getRevision() 
@@ -322,14 +324,41 @@ void cc1101::setTransmitMode()
 
 bool cc1101::regCheck()
 {
+	char b[3];
+	uint8_t val;
+
 	DBG_PRINT(FPSTR(TXT_CC1101));
-	DBG_PRINT(F("PKTCTRL0=")); DBG_PRINT(readReg(CC1100_PKTCTRL0, CC1101_CONFIG));
-	DBG_PRINT(F(" vs EEPROM PKTCTRL0=")); DBG_PRINTLN(cc1101::initVal[CC1100_PKTCTRL0]);
+	DBG_PRINT(F("_PKTCTRL0=")); DBG_PRINT(readReg(CC1100_PKTCTRL0, CC1101_CONFIG));
+	DBG_PRINT(F(" vs initval PKTCTRL0=")); DBG_PRINTLN(cc1101::initVal[CC1100_PKTCTRL0]);
 
 	DBG_PRINT(FPSTR(TXT_CC1101)); 
 	DBG_PRINT(F("_IOCFG2=")); DBG_PRINT(readReg(CC1100_IOCFG2, CC1101_CONFIG));
-	DBG_PRINT(F(" vs EEPROM IOCFG2=")); DBG_PRINTLN(cc1101::initVal[CC1100_IOCFG2]);
+	DBG_PRINT(F(" vs initval IOCFG2=")); DBG_PRINTLN(cc1101::initVal[CC1100_IOCFG2]);
+	/*
+	DBG_PRINT(FPSTR(TXT_CC1101));
+	DBG_PRINT(F("_FREQ0=")); DBG_PRINT(readReg(CC1100_FREQ0, CC1101_CONFIG));
+	DBG_PRINT(F(" vs initval FREQ0=")); DBG_PRINT(cc1101::initVal[CC1100_FREQ0]);
+	DBG_PRINT(F(" vs EEPROM FREQ0"));
+	val = EEPROM.read(EE_CC1100_CFG + CC1100_FREQ0);
+	sprintf(b, " %d", val);
+	DBG_PRINTLN(b);
 
+	DBG_PRINT(FPSTR(TXT_CC1101));
+	DBG_PRINT(F("_FREQ1=")); DBG_PRINT(readReg(CC1100_FREQ1, CC1101_CONFIG));
+	DBG_PRINT(F(" vs initval FREQ1=")); DBG_PRINT(cc1101::initVal[CC1100_FREQ1]);
+	DBG_PRINT(F(" vs EEPROM FREQ1="));
+	val = EEPROM.read(EE_CC1100_CFG + CC1100_FREQ1);
+	sprintf(b, " %d", val);
+	DBG_PRINTLN(b);
+
+	DBG_PRINT(FPSTR(TXT_CC1101));
+	DBG_PRINT(F("_FREQ2=")); DBG_PRINT(readReg(CC1100_FREQ2, CC1101_CONFIG));
+	DBG_PRINT(F(" vs initval FREQ2=")); DBG_PRINT(cc1101::initVal[CC1100_FREQ2]);
+	DBG_PRINT(F(" vs EEPROM FREQ2=")); 
+	val = EEPROM.read(EE_CC1100_CFG+CC1100_FREQ2);
+	sprintf(b, " %d", val);
+	DBG_PRINTLN(b);
+	*/
 	return (readReg(CC1100_PKTCTRL0, CC1101_CONFIG) == cc1101::initVal[CC1100_PKTCTRL0]) && (readReg(CC1100_IOCFG2, CC1101_CONFIG) == cc1101::initVal[CC1100_IOCFG2]);
 }
 
@@ -338,6 +367,7 @@ bool cc1101::regCheck()
 void cc1101::ccFactoryReset() {
 	for (uint8_t i = 0; i < sizeof(cc1101::initVal); i++) {
 		EEPROM.write(EE_CC1100_CFG + i, pgm_read_byte(&initVal[i]));
+		DBG_PRINT(".");
 	}
 	for (uint8_t i = 0; i < 8; i++) {
 		if (i == 1) {
@@ -347,7 +377,9 @@ void cc1101::ccFactoryReset() {
 			EEPROM.write(EE_CC1100_PA + i, 0);
 		}
 	}
+	#ifdef ESP8266
 	EEPROM.commit();
+	#endif
 	MSG_PRINTLN("ccFactoryReset done");
 }
 

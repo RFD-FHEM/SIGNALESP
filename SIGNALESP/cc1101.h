@@ -54,7 +54,7 @@ namespace cc1101 {
 	#define CC1100_PKTCTRL0    0x08  // Packet config register
 
   extern uint8_t revision;
-  
+	extern const uint8_t initVal[];
 	// Status registers - newer version base on 0xF0
   #define CC1101_PARTNUM_REV01      0xF0 // Chip ID
   #define CC1101_VERSION_REV01      0xF1 // Chip ID
@@ -121,11 +121,11 @@ namespace cc1101 {
 #endif
 
 	#define wait_Miso()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return; miso_count--; }      // wait until SPI MISO line goes low 
-    #define wait_Miso_rf()       while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return false; miso_count--; }      // wait until SPI MISO line goes low 
+    #define wait_Miso_rf()    while(isHigh(misoPin) ) { static uint8_t miso_count=255;delay(1); if(miso_count==0) return false; miso_count--; }      // wait until SPI MISO line goes low 
 	#define cc1101_Select()   digitalLow(csPin)          // select (SPI) CC1101
 	#define cc1101_Deselect() digitalHigh(csPin) 
 	
-	#define EE_CC1100_CFG        3
+	#define EE_CC1100_CFG        2
 	#define EE_CC1100_CFG_SIZE   0x29
 	#define EE_CC1100_PA         0x30  //  (EE_CC1100_CFG+EE_CC1100_CFG_SIZE)  // 2C
 	#define EE_CC1100_PA_SIZE    8
