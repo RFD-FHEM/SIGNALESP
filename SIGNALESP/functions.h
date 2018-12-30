@@ -9,6 +9,7 @@
 #else
 //	#include "WProgram.h"
 #endif
+#include "compile_config.h"
 #include <EEPROM.h>
 #include "output.h"
 #include "SimpleFIFO.h"
@@ -19,6 +20,10 @@ extern SimpleFIFO<int, FIFO_LENGTH> FiFo; //store FIFO_LENGTH # ints
 extern SignalDetectorClass musterDec;
 extern bool hasCC1101;
 #define pulseMin  90
+
+#ifndef ICACHE_RAM_ATTR
+#define ICACHE_RAM_ATTR 
+#endif
 
 //========================= Pulseauswertung ================================================
 void ICACHE_RAM_ATTR  handleInterrupt() {
@@ -86,6 +91,22 @@ void getFunctions(bool *ms, bool *mu, bool *mc, bool *red)
 
 
 }
+//================================= EEProm commands ======================================
+
+void dumpEEPROM() {
+#ifdef debug
+	DBG_PRINTLN("dump "); DBG_PRINT(FPSTR(TXT_EEPROM)); DBG_PRINT(FPSTR(TXT_EQ));
+	char b[4];
+	for (uint8_t i = EE_MAGIC_OFFSET; i < 56+ EE_MAGIC_OFFSET; i++) {
+		sprintf(b, "%02x ", EEPROM.read(i));
+		DBG_PRINT(b);
+			if ((i & 0x0F) == 0x0F)
+			DBG_PRINTLN("");
+	}
+	DBG_PRINTLN("");
+#endif
+}
+
 
 void initEEPROM(void) {	
 	#ifdef ESP8266
@@ -93,7 +114,6 @@ void initEEPROM(void) {
 	#endif
 	if (EEPROM.read(EE_MAGIC_OFFSET) == VERSION_1 && EEPROM.read(EE_MAGIC_OFFSET + 1) == VERSION_2) {
 		DBG_PRINT(F("Reading values from "));	DBG_PRINT(FPSTR(TXT_EEPROM)); DBG_PRINT(FPSTR(TXT_DOT)); DBG_PRINT(FPSTR(TXT_DOT));
-
 	}
 	else {
 		storeFunctions(1, 1, 1, 1);    // Init EEPROM with all flags enabled
@@ -110,11 +130,10 @@ void initEEPROM(void) {
 	}
 	getFunctions(&musterDec.MSenabled, &musterDec.MUenabled, &musterDec.MCenabled, &musterDec.MredEnabled);
 	DBG_PRINTLN(F("done"));
-
+	dumpEEPROM();
 }
 
 
-//================================= EEProm commands ======================================
 
 
 inline unsigned long getUptime()
@@ -130,6 +149,7 @@ inline unsigned long getUptime()
 	last = now;
 	return (0xFFFFFFFF / 1000) * times_rolled + (now / 1000);
 }
+
 
 
 #endif
