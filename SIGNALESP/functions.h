@@ -24,7 +24,7 @@ extern os_timer_t cronTimer;
 #define pulseMin  90
 
 
-#ifndef ICACHE_RAM_ATTR
+#ifndef ESP8266
 #define ICACHE_RAM_ATTR 
 #endif
 
