@@ -117,7 +117,6 @@ void setup() {
 
 
 	//ESP.wdtEnable(2000);
-
 	os_timer_setfn(&blinksos, &sosBlink, (void *)boot_sequence);
 	os_timer_arm(&blinksos, 300, true);
 //	WiFi.setAutoConnect(false);
@@ -336,10 +335,8 @@ void setup() {
 	Server.setNoDelay(true);
 	Server.begin();  // telnet server
 
-
 	os_timer_disarm(&cronTimer);
-
-	os_timer_arm(&cronTimer, 31, true);
+	os_timer_setfn(&cronTimer, &cronjob, 0);
 
 	musterDec.setStreamCallback(writeCallback);
 #ifdef CMP_CC1101
@@ -361,18 +358,20 @@ void setup() {
 	wifiManager.setConfigPortalBlocking( false);
 //	wifiManager.startConfigPortal();
 	wifiManager.startWebPortal();
+	os_timer_arm(&cronTimer, 31, true);
 }
 
 void ICACHE_RAM_ATTR cronjob(void *pArg) {
 
-	static uint8_t cnt = 0;
 	cli();
+	static uint8_t cnt = 0;
+
 	const unsigned long  duration = micros() - lastTime;
 
-	
-	os_timer_arm(&cronTimer, 31, true);
+	os_timer_disarm(&cronTimer);
+	os_timer_arm(&cronTimer, (maxPulse-duration+1000)/1000, true);
 
-	if (duration >= maxPulse) { //Auf Maximalwert pruefen.
+	if (duration > maxPulse) { //Auf Maximalwert pruefen.
 		int sDuration = maxPulse;
 		if (isLow(PIN_RECEIVE)) { // Wenn jetzt low ist, ist auch weiterhin low
 			sDuration = -sDuration;
@@ -381,13 +380,13 @@ void ICACHE_RAM_ATTR cronjob(void *pArg) {
 		lastTime = micros();
 	}
 	else if (duration > 10000) {
-		os_timer_arm(&cronTimer, maxPulse - duration + 16, true);
+		//os_timer_disarm(&cronTimer);
+		//os_timer_arm(&cronTimer, 20, true);
 	}
 	digitalWrite(PIN_LED, blinkLED);
 	blinkLED = false;
 
 	sei();
-
 	// Infrequent time uncritical jobs (~ every 2 hours)
 	if (cnt++ == 0)  // if cnt is 0 at start or during rollover
 		getUptime();
