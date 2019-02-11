@@ -1,3 +1,5 @@
+This repository is stale. Up to date versions can be found in  https://github.com/RFD-FHEM/SIGNALDuino/
+
 [![Build Status](https://travis-ci.org/RFD-FHEM/SIGNALESP.svg?branch=master)](https://travis-ci.org/RFD-FHEM/SIGNALESP)
 # SIGNALESP uC v3.3 (development version)
 
